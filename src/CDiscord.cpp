@@ -7,15 +7,11 @@
 #include <mutex>
 
 // ------------------------------------------------------------------------------------------------
-// guard to lock while disconnecting
-std::mutex m_Guard;
-
-// ------------------------------------------------------------------------------------------------
 using namespace SqDiscord;
 
 // ------------------------------------------------------------------------------------------------
 void CDiscord::onServer(SleepyDiscord::Server server) {
-	std::lock_guard<std::mutex> lock(m_Guard);
+	std::lock_guard<std::mutex> lock(session->m_Guard);
 	try {
 		s_servers[server.ID.string()] = server;
 	}
@@ -26,7 +22,7 @@ void CDiscord::onServer(SleepyDiscord::Server server) {
 
 // ------------------------------------------------------------------------------------------------
 void CDiscord::onMessage(SleepyDiscord::Message message) {
-	std::lock_guard<std::mutex> lock(m_Guard);
+	std::lock_guard<std::mutex> lock(session->m_Guard);
 	try {
 		std::string author_nick;
 		SleepyDiscord::Server server;
@@ -69,7 +65,7 @@ void CDiscord::onMessage(SleepyDiscord::Message message) {
 
 // ------------------------------------------------------------------------------------------------
 void CDiscord::onReady(SleepyDiscord::Ready readyData) {
-	std::lock_guard<std::mutex> lock(m_Guard);
+	std::lock_guard<std::mutex> lock(session->m_Guard);
 	try {
 		this->session->isConnected = true;
 		this->session->isConnecting = false;
@@ -84,7 +80,7 @@ void CDiscord::onReady(SleepyDiscord::Ready readyData) {
 
 // ------------------------------------------------------------------------------------------------
 void CDiscord::onEditMember(SleepyDiscord::Snowflake<SleepyDiscord::Server> serverID, SleepyDiscord::User user, std::vector<SleepyDiscord::Snowflake<SleepyDiscord::Role>> nroles, std::string nnick) {
-	std::lock_guard<std::mutex> lock(m_Guard);
+	std::lock_guard<std::mutex> lock(session->m_Guard);
 	try {
 		std::list<SleepyDiscord::ServerMember> & members = s_servers.at(serverID).members;
 

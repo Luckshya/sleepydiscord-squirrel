@@ -7,9 +7,6 @@
 // ------------------------------------------------------------------------------------------------
 #include <thread>
 
-// guard to lock while disconnecting
-extern std::mutex m_Guard;
-
 // ------------------------------------------------------------------------------------------------
 class CDiscord;
 
@@ -21,12 +18,14 @@ typedef const char * CCStr;
 class CSession
 {
 public:
-	CCStr token = NULL;
-	CDiscord * client = nullptr;
-	std::thread * sleepyThread = nullptr;
-	unsigned short int connID = 0;
-	bool isConnecting = false;
-	bool isConnected = false;
+	CDiscord * client			= nullptr;
+	std::thread * sleepyThread	= nullptr;
+	unsigned short int connID	= 0;
+	bool isConnecting			= false;
+	bool isConnected			= false;
+
+	// Mutex lock to guard while connecting and disconnecting
+	std::mutex m_Guard;
 
 	// Mutex lock to guard s_Messages container
 	std::mutex m_MsgGuard;
@@ -47,7 +46,7 @@ public:
 	static void Terminate();
 
 	void Update();
-	void runSleepy();
+	void runSleepy(CCStr);
 	void Disconnect();
 	void Destroy();
 	unsigned short int GetConnID();

@@ -21,9 +21,6 @@ CSession::CSession()
 {
 	try
 	{
-		token = NULL;
-		client = nullptr;
-
 		if (!s_Session && s_Sessions.empty())
 		{
 			s_Session = this;
@@ -154,11 +151,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 	try
 	{
 		// initialize the connection
-		session->client = new CDiscord(token);
-		session->isConnecting = true;
-		session->token = token;
-		session->sleepyThread = new std::thread(&CSession::runSleepy, session);
-		session->client->session = session;
+		session->sleepyThread = new std::thread(&CSession::runSleepy, session, token);
 	}
 	catch (...)
 	{
@@ -169,9 +162,17 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::runSleepy() {
+void CSession::runSleepy(CCStr token) {
 	try
 	{
+		{
+			std::lock_guard<std::mutex> lock(m_Guard);
+
+			isConnecting = true;
+			client = new CDiscord(token);
+			client->session = this;
+		}
+
 		client->run();
 	}
 	catch (...)
@@ -258,6 +259,11 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 
 	else if (top <= 2)
 	{
+		return sq_throwerror(vm, "Missing the content value");
+	}
+
+	else if (top <= 3)
+	{
 		return sq_throwerror(vm, "Missing the Embed value");
 	}
 
@@ -285,7 +291,7 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 	Embed * embed = nullptr;
 
 	try {
-		embed = Sqrat::Var< Embed * >(vm, 3).value;
+		embed = Sqrat::Var< Embed * >(vm, 4).value;
 	}
 	catch (const Sqrat::Exception& e) {
 		return sq_throwerror(vm, e.what());
@@ -298,12 +304,18 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 	CCStr channelID = NULL;
 	if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
 	{
+		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
+	}
+
+	CCStr content = NULL;
+	if (SQ_FAILED(sq_getstring(vm, 3, &content)))
+	{
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
 	}
 
 	try
 	{
-		auto msg = session->client->sendMessage(channelID, "", *(embed->embed));
+		auto msg = session->client->sendMessage(channelID, content, *(embed->embed));
 	}
 	catch (...)
 	{
@@ -440,12 +452,24 @@ void CSession::Disconnect()
 {
 	try
 	{
-		if (isConnected)
+		std::lock_guard<std::mutex> lock(m_Guard);
+
+		if (client != nullptr)
 		{
-			std::lock_guard<std::mutex> lock(m_Guard);
 			client->quit();
-			isConnected = false;
-			isConnecting = false;
+
+			if (sleepyThread != nullptr)
+			{
+				sleepyThread->join();
+				delete sleepyThread;
+				sleepyThread = nullptr;
+			}
+
+			isConnected		= false;
+			isConnecting	= false;
+
+			delete client;
+			client = nullptr;
 		}
 	}
 	catch(...)
@@ -457,17 +481,17 @@ void CSession::Disconnect()
 // ------------------------------------------------------------------------------------------------
 void CSession::Destroy()
 {
-	if (!client)
 	{
-		return;
+		std::lock_guard<std::mutex> lock(m_Guard);
+
+		if (!client)
+		{
+			return;
+		}
 	}
 
 	// Disconnect the session
 	Disconnect();
-	
-	client->session = nullptr;
-	delete client;
-	client = nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------

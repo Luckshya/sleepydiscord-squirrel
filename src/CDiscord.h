@@ -25,8 +25,6 @@ public:
 	//std::vector<std::vector<SleepyDiscord::ServerMember>> s_members;
 	std::unordered_map<std::string, SleepyDiscord::Server> s_servers;
 	SqDiscord::CSession * session;
-	bool isConnected = false;
-	bool isConnecting = false;
 
 	void onMessage(SleepyDiscord::Message message) override;
 	void onReady(SleepyDiscord::Ready readyData) override;
