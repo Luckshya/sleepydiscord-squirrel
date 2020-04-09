@@ -3,6 +3,11 @@ project(sleepydiscord-squirrel)
 
 option(BUILD_64 "" OFF)
 
+if(UNIX)
+	set(USE_SYSTEM_CURL OFF)
+	set(CMAKE_USE_OPENSSL ON)
+endif()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(ExternalProject)
