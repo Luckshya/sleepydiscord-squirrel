@@ -151,7 +151,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 	try
 	{
 		// initialize the connection
-		session->sleepyThread = new std::thread(&CSession::runSleepy, session, token);
+		session->sleepyThread = new std::thread(&CSession::runSleepy, session, std::string(token));
 	}
 	catch (...)
 	{
@@ -162,7 +162,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::runSleepy(CCStr token) {
+void CSession::runSleepy(std::string token) {
 	try
 	{
 		{

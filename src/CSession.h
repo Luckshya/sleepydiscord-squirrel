@@ -46,7 +46,7 @@ public:
 	static void Terminate();
 
 	void Update();
-	void runSleepy(CCStr);
+	void runSleepy(std::string);
 	void Disconnect();
 	void Destroy();
 	unsigned short int GetConnID();
