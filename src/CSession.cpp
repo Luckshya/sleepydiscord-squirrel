@@ -7,9 +7,6 @@
 // ------------------------------------------------------------------------------------------------
 namespace SqDiscord
 {
-// ------------------------------------------------------------------------------------------------
-typedef std::vector<CSession*> Sessions;
-
 // variable to hold in case on one connection only
 CSession * s_Session = nullptr;
 
@@ -58,9 +55,9 @@ void CSession::Process()
 	// Do we have multiple sessions?
 	else if (!s_Sessions.empty())
 	{
-		for (auto itr = s_Sessions.begin(); itr != s_Sessions.end(); ++itr)
+		for (auto & session : s_Sessions)
 		{
-			(*itr)->Update();
+            session->Update();
 		}
 	}
 }
@@ -87,11 +84,11 @@ void CSession::Update()
 	{
 		std::lock_guard<std::mutex> lockA(m_ReadyGuard);
 
-		for (auto itr = s_ReadySession.begin(); itr != s_ReadySession.end(); ++itr)
+		for (auto & session : s_ReadySession)
 		{
-			if ((*itr) != nullptr && (*itr)->client != nullptr)
+			if (session != nullptr && session->client != nullptr)
 			{
-				Event_onReady(*itr);
+				Event_onReady(session);
 			}
 		}
 
@@ -102,9 +99,9 @@ void CSession::Update()
 	{
 		std::lock_guard<std::mutex> lockB(m_MsgGuard);
 
-		for (auto itr = s_Messages.begin(); itr != s_Messages.end(); ++itr)
+		for (auto & message : s_Messages)
 		{
-			Event_onMessage(this, (itr->channelID).c_str(), (itr->author).c_str(), (itr->authorNick).c_str(), (itr->authorID).c_str(), itr->roles, (itr->message).c_str());
+			Event_onMessage(this, (message.channelID).c_str(), (message.author).c_str(), (message.authorNick).c_str(), (message.authorID).c_str(), message.roles, (message.message).c_str());
 		}
 
 		s_Messages.clear();
@@ -142,7 +139,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 		return sq_throwerror(vm, "Already connected");
 	}
 
-	CCStr token = NULL;
+	CCStr token = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 2, &token)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
@@ -170,7 +167,16 @@ void CSession::runSleepy(std::string token) {
 
 			isConnecting = true;
 			client = new CDiscord(token);
-			client->session = this;
+
+			auto intents = {
+                SleepyDiscord::Intent::SERVERS,
+                SleepyDiscord::Intent::SERVER_MESSAGES,
+                SleepyDiscord::Intent::SERVER_MEMBERS,
+                SleepyDiscord::Intent::DIRECT_MESSAGES
+			};
+
+			client->setIntents(intents);
+			this->client->session = this;
 		}
 
 		client->run();
@@ -223,13 +229,13 @@ SQInteger CSession::Message(HSQUIRRELVM vm)
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
-	CCStr channelID = NULL;
+	CCStr channelID = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
-	CCStr message = NULL;
+	CCStr message = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 3, &message)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
@@ -301,13 +307,13 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 		return sq_throwerror(vm, "Invalid Embed instance");
 	}
 
-	CCStr channelID = NULL;
+	CCStr channelID = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
-	CCStr content = NULL;
+	CCStr content = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 3, &content)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
@@ -361,13 +367,13 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
-	CCStr serverID = NULL;
+	CCStr serverID = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 2, &serverID)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
-	CCStr roleID = NULL;
+	CCStr roleID = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 3, &roleID)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
@@ -377,9 +383,9 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
 		std::list<SleepyDiscord::Role> roles = session->client->s_servers.at(std::string(serverID)).roles;
 
 		bool found = false;
-		CCStr role_name = NULL;
+		CCStr role_name = nullptr;
 
-		for (SleepyDiscord::Role role : roles) {
+		for (const auto & role : roles) {
 			if (role.ID.string() == std::string(roleID)) {
 				found = true;
 				role_name = role.name.c_str();
@@ -431,7 +437,7 @@ SQInteger CSession::SetActivity(HSQUIRRELVM vm)
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
-	CCStr activity = NULL;
+	CCStr activity = nullptr;
 	if (SQ_FAILED(sq_getstring(vm, 2, &activity)))
 	{
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
@@ -500,7 +506,7 @@ CSession::~CSession()
 	Destroy();
 
 	// Attempt to find our self in the session pool
-	Sessions::iterator itr = std::find(s_Sessions.begin(), s_Sessions.end(), this);
+	auto itr = std::find(s_Sessions.begin(), s_Sessions.end(), this);
 	// Are we in the pool?
 	if (itr != s_Sessions.end())
 	{
@@ -524,9 +530,9 @@ void CSession::Terminate()
 	// Do we have multiple sessions?
 	else if (!s_Sessions.empty())
 	{
-		for (Sessions::iterator itr = s_Sessions.begin(); itr != s_Sessions.end(); ++itr)
+		for (auto & session : s_Sessions)
 		{
-			(*itr)->Destroy();
+            session->Destroy();
 		}
 	}
 }

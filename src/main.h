@@ -11,12 +11,12 @@
 #include <squirrel.h>
 
 // ------------------------------------------------------------------------------------------------
-#include <math.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include <cmath>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
 
 // A definition needed for Squirrel's print function
 #ifdef SQUNICODE

@@ -50,7 +50,7 @@ void Event_onReady(CSession * session)
 }
 
 // ------------------------------------------------------------------------------------------------
-void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr authorNick, CCStr authorID, std::vector<SleepyDiscord::Snowflake<SleepyDiscord::Role>> roles, CCStr message)
+void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr authorNick, CCStr authorID, const std::vector<SleepyDiscord::Snowflake<SleepyDiscord::Role>>& roles, CCStr message)
 {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
@@ -77,8 +77,8 @@ void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr au
 
 		sq_newarray(vm, 0);
 
-		for (unsigned short int i = 0; i < roles.size(); ++i) {
-			sq_pushstring(vm, roles.at(i).string().c_str(), -1);
+		for (auto & role : roles) {
+			sq_pushstring(vm, role.string().c_str(), -1);
 			sq_arrayappend(vm, -2);
 		}
 

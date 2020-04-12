@@ -83,9 +83,7 @@ uint8_t SqDiscord_OnPluginCommand(uint32_t command_identifier, const char* /*mes
 	switch( command_identifier )
 	{
 		case 0x7D6E22D8: return SqDiscord_OnSquirrelScriptLoad();
-
-		default:
-			break;
+		default: break;
 	}
 
 	return 1;

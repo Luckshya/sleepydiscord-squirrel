@@ -30,8 +30,6 @@ void CDiscord::onMessage(SleepyDiscord::Message message) {
 
 		bool isDM = false;
 
-		SleepyDiscord::Channel chan = this->getChannel(message.channelID);
-
 		SleepyDiscord::ObjectResponse<SleepyDiscord::Channel> getChannelResponse = this->getChannel(message.channelID);
 		if (getChannelResponse.error())
 		{
@@ -39,13 +37,15 @@ void CDiscord::onMessage(SleepyDiscord::Message message) {
 			return;
 		}
 
+        SleepyDiscord::Channel chan = getChannelResponse;
+
 		if (chan.type == SleepyDiscord::Channel::ChannelType::DM || chan.type == SleepyDiscord::Channel::ChannelType::GROUP_DM) {
 			isDM = true;
 		}
 
 		if (!isDM) {
 			server = s_servers.at(message.serverID.string());
-			for (SleepyDiscord::ServerMember member : server.members) {
+			for (const auto & member : server.members) {
 				if (member.user.ID.number() == message.author.ID.number()) {
 					roles = member.roles;
 					break;
@@ -84,10 +84,10 @@ void CDiscord::onEditMember(SleepyDiscord::Snowflake<SleepyDiscord::Server> serv
 	try {
 		std::list<SleepyDiscord::ServerMember> & members = s_servers.at(serverID).members;
 
-		for (std::list<SleepyDiscord::ServerMember>::iterator it = members.begin(); it != members.end(); ++it) {
-			if ((*it).ID.number() == user.ID.number()) {
-				(*it).roles = nroles;
-				(*it).nick = nnick;
+		for (auto & member : members) {
+			if (member.ID.number() == user.ID.number()) {
+				member.roles = nroles;
+				member.nick = nnick;
 				break;
 			}
 		}
