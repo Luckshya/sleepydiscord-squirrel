@@ -168,14 +168,14 @@ void CSession::runSleepy(std::string token) {
 			isConnecting = true;
 			client = new CDiscord(token);
 
-			auto intents = {
+			/*auto intents = {
                 SleepyDiscord::Intent::SERVERS,
                 SleepyDiscord::Intent::SERVER_MESSAGES,
                 SleepyDiscord::Intent::SERVER_MEMBERS,
                 SleepyDiscord::Intent::DIRECT_MESSAGES
 			};
 
-			client->setIntents(intents);
+			client->setIntents(intents);*/
 			this->client->session = this;
 		}
 
