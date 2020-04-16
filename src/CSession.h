@@ -41,8 +41,11 @@ public:
 
 	CSession();
 	~CSession();
-	
-	static void Process();
+
+    CSession(const CSession & o) = delete;
+    CSession(CSession && o) = delete;
+
+    static void Process();
 	static void Terminate();
 
 	void Update();

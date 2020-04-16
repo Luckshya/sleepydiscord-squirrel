@@ -6,14 +6,14 @@ namespace SqDiscord
 {
 // ------------------------------------------------------------------------------------------------
 Embed::Embed()
+    : embed(new SleepyDiscord::Embed())
 {
-	embed = new SleepyDiscord::Embed();
 	embed->title = "";
 	embed->description = "";
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::AddField(EmbedField field) {
+void Embed::AddField(const EmbedField & field) {
 	embed->fields.push_back(*(field.field));
 }
 
@@ -48,38 +48,33 @@ void Embed::SetColor(int32_t color) {
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetFooter(EmbedFooter footer) {
+void Embed::SetFooter(const EmbedFooter & footer) {
 	embed->footer = *(footer.embedFooter);
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetImage(EmbedImage img) {
+void Embed::SetImage(const EmbedImage & img) {
 	embed->image = *(img.embedImage);
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetThumbnail(EmbedThumbnail tn) {
+void Embed::SetThumbnail(const EmbedThumbnail & tn) {
 	embed->thumbnail = *(tn.embedThumbnail);
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetVideo(EmbedVideo vid) {
+void Embed::SetVideo(const EmbedVideo & vid) {
 	embed->video = *(vid.embedVideo);
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetProvider(EmbedProvider provider) {
+void Embed::SetProvider(const EmbedProvider & provider) {
 	embed->provider = *(provider.embedProvider);
 }
 
 // ------------------------------------------------------------------------------------------------
-void Embed::SetAuthor(EmbedAuthor author) {
+void Embed::SetAuthor(const EmbedAuthor & author) {
 	embed->author = *(author.embedAuthor);
-}
-
-// ------------------------------------------------------------------------------------------------
-Embed::~Embed() {
-	delete embed;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -89,7 +84,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 	HSQUIRRELVM vm = embeds.GetVM();
 
 	embeds.Bind("Embed",
-		Class< Embed, NoCopy< Embed > >(vm, "Embed")
+		Class< Embed >(vm, "Embed")
 
 		.Func("AddField", &Embed::AddField)
 		.Func("SetTitle", &Embed::SetTitle)
@@ -108,7 +103,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedField",
-		Class< EmbedField, NoCopy<EmbedField> >(vm, "EmbedField")
+		Class< EmbedField >(vm, "EmbedField")
 
 		.Func("SetName", &EmbedField::SetName)
 		.Func("SetValue", &EmbedField::SetValue)
@@ -117,7 +112,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedThumbnail",
-		Class< EmbedThumbnail, NoCopy<EmbedThumbnail> >(vm, "EmbedThumbnail")
+		Class< EmbedThumbnail >(vm, "EmbedThumbnail")
 
 		.Func("SetURL", &EmbedThumbnail::SetURL)
 		.Func("SetProxyURL", &EmbedThumbnail::SetProxyURL)
@@ -127,7 +122,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedField",
-		Class< EmbedField, NoCopy<EmbedField> >(vm, "EmbedField")
+		Class< EmbedField >(vm, "EmbedField")
 
 		.Func("SetName", &EmbedField::SetName)
 		.Func("SetValue", &EmbedField::SetValue)
@@ -136,7 +131,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedFooter",
-		Class< EmbedFooter, NoCopy<EmbedFooter> >(vm, "EmbedFooter")
+		Class< EmbedFooter >(vm, "EmbedFooter")
 
 		.Func("SetText", &EmbedFooter::SetText)
 		.Func("SetIconURL", &EmbedFooter::SetIconURL)
@@ -145,7 +140,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedImage",
-		Class< EmbedImage, NoCopy<EmbedImage> >(vm, "EmbedImage")
+		Class< EmbedImage >(vm, "EmbedImage")
 
 		.Func("SetURL", &EmbedImage::SetURL)
 		.Func("SetProxyURL", &EmbedImage::SetProxyURL)
@@ -155,7 +150,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedVideo",
-		Class< EmbedVideo, NoCopy<EmbedVideo> >(vm, "EmbedVideo")
+		Class< EmbedVideo >(vm, "EmbedVideo")
 
 		.Func("SetURL", &EmbedVideo::SetURL)
 		.Func("SetHeight", &EmbedVideo::SetHeight)
@@ -164,7 +159,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedProvider",
-		Class< EmbedProvider, NoCopy<EmbedProvider> >(vm, "EmbedProvider")
+		Class< EmbedProvider >(vm, "EmbedProvider")
 
 		.Func("SetName", &EmbedProvider::SetName)
 		.Func("SetURL", &EmbedProvider::SetURL)
@@ -172,7 +167,7 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 	// ------------------------------------------------------------------------------------------------
 	embeds.Bind("EmbedAuthor",
-		Class< EmbedAuthor, NoCopy<EmbedAuthor> >(vm, "EmbedAuthor")
+		Class< EmbedAuthor >(vm, "EmbedAuthor")
 
 		.Func("SetName", &EmbedAuthor::SetName)
 		.Func("SetURL", &EmbedAuthor::SetURL)
@@ -183,8 +178,8 @@ void Register_Embeds(Sqrat::Table embeds) {
 
 // ------------------------------------------------------------------------------------------------
 EmbedField::EmbedField()
+    : field(new SleepyDiscord::EmbedField())
 {
-	field = new SleepyDiscord::EmbedField();
 	field->name = "";
 	field->value = "";
 }
@@ -208,14 +203,8 @@ void EmbedField::SetInline(bool isInline)
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedField::~EmbedField() {
-	delete field;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedThumbnail::EmbedThumbnail() {
-	embedThumbnail = new SleepyDiscord::EmbedThumbnail();
-}
+EmbedThumbnail::EmbedThumbnail()
+    : embedThumbnail(new SleepyDiscord::EmbedThumbnail()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedThumbnail::SetURL(CCStr url) {
@@ -238,14 +227,8 @@ void EmbedThumbnail::SetWidth(int64_t wd) {
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedThumbnail::~EmbedThumbnail() {
-	delete embedThumbnail;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedFooter::EmbedFooter() {
-	embedFooter = new SleepyDiscord::EmbedFooter();
-}
+EmbedFooter::EmbedFooter()
+    : embedFooter(new SleepyDiscord::EmbedFooter()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedFooter::SetText(CCStr text) {
@@ -263,14 +246,8 @@ void EmbedFooter::SetProxyIconURL(CCStr pURL) {
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedFooter::~EmbedFooter() {
-	delete embedFooter;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedImage::EmbedImage() {
-	embedImage = new SleepyDiscord::EmbedImage();
-}
+EmbedImage::EmbedImage()
+    : embedImage(new SleepyDiscord::EmbedImage()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedImage::SetURL(CCStr url) {
@@ -293,14 +270,8 @@ void EmbedImage::SetWidth(int64_t wd) {
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedImage::~EmbedImage() {
-	delete embedImage;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedVideo::EmbedVideo() {
-	embedVideo = new SleepyDiscord::EmbedVideo();
-}
+EmbedVideo::EmbedVideo()
+:   embedVideo(new SleepyDiscord::EmbedVideo()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedVideo::SetURL(CCStr url) {
@@ -318,14 +289,8 @@ void EmbedVideo::SetWidth(int64_t wd) {
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedVideo::~EmbedVideo() {
-	delete embedVideo;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedProvider::EmbedProvider() {
-	embedProvider = new SleepyDiscord::EmbedProvider();
-}
+EmbedProvider::EmbedProvider()
+: embedProvider(new SleepyDiscord::EmbedProvider()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedProvider::SetName(CCStr name) {
@@ -334,18 +299,12 @@ void EmbedProvider::SetName(CCStr name) {
 
 // ------------------------------------------------------------------------------------------------
 void EmbedProvider::SetURL(CCStr url) {
-	embedProvider->url = url;
+    embedProvider->url = url;
 }
 
 // ------------------------------------------------------------------------------------------------
-EmbedProvider::~EmbedProvider() {
-	delete embedProvider;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedAuthor::EmbedAuthor() {
-	embedAuthor = new SleepyDiscord::EmbedAuthor();
-}
+EmbedAuthor::EmbedAuthor()
+    : embedAuthor(new SleepyDiscord::EmbedAuthor()) {}
 
 // ------------------------------------------------------------------------------------------------
 void EmbedAuthor::SetName(CCStr author) {
@@ -365,11 +324,6 @@ void EmbedAuthor::SetIconURL(CCStr iconURL) {
 // ------------------------------------------------------------------------------------------------
 void EmbedAuthor::SetProxyIconURL(CCStr pIconUrl) {
 	embedAuthor->proxyIconUrl = pIconUrl;
-}
-
-// ------------------------------------------------------------------------------------------------
-EmbedAuthor::~EmbedAuthor() {
-	embedAuthor = new SleepyDiscord::EmbedAuthor();
 }
 }
 
