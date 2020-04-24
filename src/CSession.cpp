@@ -243,7 +243,7 @@ SQInteger CSession::Message(HSQUIRRELVM vm)
 
 	try
 	{
-		auto msg = session->client->sendMessage(channelID, message);
+		auto msg = session->client->sendMessage(channelID, message, SleepyDiscord::Async);
 	}
 	catch (...)
 	{
@@ -321,7 +321,7 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 
 	try
 	{
-		auto msg = session->client->sendMessage(channelID, content, *(embed->embed));
+		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), false, SleepyDiscord::Async);
 	}
 	catch (...)
 	{
