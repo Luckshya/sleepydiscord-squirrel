@@ -352,7 +352,7 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
 		session = Sqrat::Var< CSession * >(vm, 1).value;
 	}
 	catch (const Sqrat::Exception& e) {
-		return sq_throwerror(vm, e.Message().c_str());
+		return sq_throwerror(vm, e.what());
 	}
 
 	if (!session) {
@@ -380,30 +380,104 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
 	}
 
 	try {
-		std::list<SleepyDiscord::Role> roles = session->client->s_servers.at(std::string(serverID)).roles;
+        std::string s_serverID = std::string(serverID);
 
-		bool found = false;
-		CCStr role_name = nullptr;
+        auto rolesIndex = session->client->s_servers.find(std::string(serverID));
 
-		for (const auto & role : roles) {
-			if (role.ID.string() == std::string(roleID)) {
-				found = true;
-				role_name = role.name.c_str();
-				sq_pushstring(vm, role_name, -1);
-				break;
-			}
-		}
+        if(rolesIndex == session->client->s_servers.end()) {
+            return sq_throwerror(vm, "Invalid server ID");
+        }
 
+        std::list<SleepyDiscord::Role>& roles = (rolesIndex->second).roles;
+        bool found = false;
+        CCStr role_name = nullptr;
 
-		if (!found) {
-			return sq_throwerror(vm, "Invalid role ID");
-		}
+        for (const auto & role : roles) {
+            if (role.ID.string() == std::string(roleID)) {
+                found = true;
+                role_name = role.name.c_str();
+                sq_pushstring(vm, role_name, -1);
+                break;
+            }
+        }
+
+        if (!found) {
+            return sq_throwerror(vm, "Invalid role ID");
+        }
 	}
 	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [RoleName]");
 	}
 
 	return 1;
+}
+
+// ------------------------------------------------------------------------------------------------
+SQInteger CSession::EditChannel(HSQUIRRELVM vm) {
+    const int top = sq_gettop(vm);
+
+    if (top <= 1)
+    {
+        return sq_throwerror(vm, "Missing the channel ID value");
+    }
+
+    else if (top <= 2)
+    {
+        return sq_throwerror(vm, "Missing the channel name value");
+    }
+
+    else if (top <= 3)
+    {
+        return sq_throwerror(vm, "Missing the channel topic value");
+    }
+
+    CSession * session = nullptr;
+
+    try {
+        session = Sqrat::Var< CSession * >(vm, 1).value;
+    }
+    catch (const Sqrat::Exception& e) {
+        return sq_throwerror(vm, e.what());
+    }
+
+    if (!session) {
+        return sq_throwerror(vm, "Invalid session instance");
+    }
+
+    else if (!session->client) {
+        return sq_throwerror(vm, "Invalid Discord client");
+    }
+
+    else if (!session->isConnected) {
+        return sq_throwerror(vm, "Session is not connected");
+    }
+
+    CCStr channelID = nullptr;
+    if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
+    {
+        return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
+    }
+
+    CCStr name = nullptr;
+    if (SQ_FAILED(sq_getstring(vm, 3, &name)))
+    {
+        return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
+    }
+
+    CCStr topic = nullptr;
+    if (SQ_FAILED(sq_getstring(vm, 4, &topic)))
+    {
+        return sq_throwerror(vm, "Failed to retrieve argument 3 as string");
+    }
+
+    try {
+        auto response = session->client->editChannel(std::string(channelID), std::string(name), std::string(topic), SleepyDiscord::Async);
+    }
+    catch (...) {
+        OutputErr("An Error has occured at [CSession] function => [EditChannel]");
+    }
+
+    return 0;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -552,6 +626,7 @@ void Register_CSession(Sqrat::Table discordcn)
 		.SquirrelFunc("Message", &CSession::Message)
 		.SquirrelFunc("MessageEmbed", &CSession::MessageEmbed)
 		.SquirrelFunc("GetRoleName", &CSession::GetRoleName)
+		.SquirrelFunc("EditChannel", &CSession::EditChannel)
 		.SquirrelFunc("SetActivity", &CSession::SetActivity)
 	);
 }

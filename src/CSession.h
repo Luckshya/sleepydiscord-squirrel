@@ -58,6 +58,7 @@ public:
 	static SQInteger Message(HSQUIRRELVM vm);
 	static SQInteger MessageEmbed(HSQUIRRELVM vm);
 	static SQInteger GetRoleName(HSQUIRRELVM vm);
+	static SQInteger EditChannel(HSQUIRRELVM vm);
 	static SQInteger SetActivity(HSQUIRRELVM vm);
 };
 
