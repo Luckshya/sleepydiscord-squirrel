@@ -79,9 +79,9 @@ public:
 
 	unsigned short int GetConnID();
 
-	bool CSession::GetErrorEventEnabled();
+	bool GetErrorEventEnabled();
 
-	void CSession::SetErrorEventEnabled(bool toggle);
+	void SetErrorEventEnabled(bool toggle);
 
 	static SQInteger Connect(HSQUIRRELVM vm);
 
