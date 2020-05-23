@@ -3,6 +3,7 @@
 // ------------------------------------------------------------------------------------------------
 #include "sqrat.h"
 #include "CMessage.h"
+#include "CError.h"
 
 // ------------------------------------------------------------------------------------------------
 #include <thread>
@@ -23,6 +24,7 @@ public:
 	unsigned short int connID	= 0;
 	bool isConnecting			= false;
 	bool isConnected			= false;
+	bool errorEventEnabled      = false;
 
 	// Mutex lock to guard while connecting and disconnecting
 	std::mutex m_Guard;
@@ -33,11 +35,29 @@ public:
 	// Mutex lock to guard s_ReadySessions container
 	std::mutex m_ReadyGuard;
 
+	// Mutex lock to guard s_Errors container
+    std::mutex m_ErrorGuard;
+
+    // Mutex lock to guard s_Disconnects container
+    std::mutex m_DisconnectsGuard;
+
+    // Mutex lock to guard s_Quits container
+    std::mutex m_QuitsGuard;
+
 	// Container to hold messages
 	std::vector<CMessage> s_Messages;
 
 	// Container to hold readyEvent to be called in a Queue
 	std::vector<CSession *> s_ReadySession;
+
+	// Container to hold error messages
+	std::vector<CError> s_Errors;
+
+    // Container to hold Disconnect Event to be called in a Queue
+    std::vector<CSession *> s_Disconnects;
+
+    // Container to hold Quit Event to be called in a Queue
+    std::vector<CSession *> s_Quits;
 
 	CSession();
 	~CSession();
@@ -53,6 +73,8 @@ public:
 	void Disconnect();
 	void Destroy();
 	unsigned short int GetConnID();
+    bool CSession::GetErrorEventEnabled();
+    void CSession::SetErrorEventEnabled(bool toggle);
 
 	static SQInteger Connect(HSQUIRRELVM vm);
 	static SQInteger Message(HSQUIRRELVM vm);

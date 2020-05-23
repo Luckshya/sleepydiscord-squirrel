@@ -50,7 +50,7 @@ void Event_onReady(CSession * session)
 }
 
 // ------------------------------------------------------------------------------------------------
-void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr authorNick, CCStr authorID, const std::vector<SleepyDiscord::Snowflake<SleepyDiscord::Role>>& roles, CCStr message)
+void Event_onMessage(CSession * session, CString channelID, CString author, CString authorNick, CString authorID, s_Roles roles, CString message)
 {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
@@ -70,10 +70,10 @@ void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr au
 		sq_pushobject(vm, callback.GetEnv());
 
 		PushVar(vm, session);
-		sq_pushstring(vm, channelID, -1);
-		sq_pushstring(vm, author, -1);
-		sq_pushstring(vm, authorNick, -1);
-		sq_pushstring(vm, authorID, -1);
+		sq_pushstring(vm, channelID.c_str(), -1);
+		sq_pushstring(vm, author.c_str(), -1);
+		sq_pushstring(vm, authorNick.c_str(), -1);
+		sq_pushstring(vm, authorID.c_str(), -1);
 
 		sq_newarray(vm, 0);
 
@@ -82,7 +82,7 @@ void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr au
 			sq_arrayappend(vm, -2);
 		}
 
-		sq_pushstring(vm, message, -1);
+		sq_pushstring(vm, message.c_str(), -1);
 
 		SQRESULT result = sq_call(vm, 8, 0, SQTrue);
 
@@ -110,6 +110,123 @@ void Event_onMessage(CSession * session, CCStr channelID, CCStr author, CCStr au
 	catch (...)
 	{
 		OutputErr("Discord event [MESSAGE] => Unknown error");
+	}
+
+	callback.Release();
+}
+
+// ------------------------------------------------------------------------------------------------
+void Event_onError(CSession * session, int errorCode, const std::string& errorMessage)
+{
+    HSQUIRRELVM vm = DefaultVM::Get();
+
+    Function callback = RootTable(vm).GetFunction("onDiscord_Error");
+
+    if (callback.IsNull())
+    {
+        callback.Release();
+        return;
+    }
+
+    try
+    {
+        callback.Execute(session, errorCode, errorMessage);
+    }
+    catch (Sqrat::Exception& e)
+    {
+        std::ostringstream error;
+        error << "Discord event [ERROR] => Squirrel error [" << e.what() << "]";
+
+        OutputErr(error.str().c_str());
+    }
+    catch (const std::exception& e)
+    {
+        std::ostringstream error;
+        error << "Discord event [ERROR] => Program error [" << e.what() << "]";
+
+        OutputErr(error.str().c_str());
+    }
+    catch (...)
+    {
+        OutputErr("Discord event [ERROR] => Unknown error");
+    }
+
+    callback.Release();
+}
+
+// ------------------------------------------------------------------------------------------------
+void Event_onDisconnect(CSession * session)
+{
+	HSQUIRRELVM vm = DefaultVM::Get();
+
+	Function callback = RootTable(vm).GetFunction("onDiscord_Disconnect");
+
+	if (callback.IsNull())
+	{
+		callback.Release();
+		return;
+	}
+
+	try
+	{
+		callback.Execute(session);
+	}
+	catch (Sqrat::Exception& e)
+	{
+		std::ostringstream error;
+		error << "Discord event [DISCONNECT] => Squirrel error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (const std::exception& e)
+	{
+		std::ostringstream error;
+		error << "Discord event [DISCONNECT] => Program error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (...)
+	{
+		OutputErr("Discord event [DISCONNECT] => Unknown error");
+	}
+
+	callback.Release();
+}
+
+// ------------------------------------------------------------------------------------------------
+void Event_onQuit(CSession * session)
+{
+	HSQUIRRELVM vm = DefaultVM::Get();
+
+	Function callback = RootTable(vm).GetFunction("onDiscord_Quit");
+
+	if (callback.IsNull())
+	{
+		callback.Release();
+		return;
+	}
+
+	try
+	{
+		callback.Execute(session);
+	}
+	catch (Sqrat::Exception& e)
+	{
+		std::ostringstream error;
+		error << "Discord event [QUIT] => Squirrel error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (const std::exception& e)
+	{
+		std::ostringstream error;
+		error << "Discord event [QUIT] => Program error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (...)
+	{
+		OutputErr("Discord event [QUIT] => Unknown error");
 	}
 
 	callback.Release();

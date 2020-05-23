@@ -88,7 +88,7 @@ void CSession::Update()
 		{
 			if (session != nullptr && session->client != nullptr)
 			{
-				Event_onReady(session);
+				Event_onReady(this);
 			}
 		}
 
@@ -101,10 +101,52 @@ void CSession::Update()
 
 		for (auto & message : s_Messages)
 		{
-			Event_onMessage(this, (message.channelID).c_str(), (message.author).c_str(), (message.authorNick).c_str(), (message.authorID).c_str(), message.roles, (message.message).c_str());
+			Event_onMessage(this, message.channelID, message.author, message.authorNick, message.authorID, message.roles, message.message);
 		}
 
 		s_Messages.clear();
+	}
+
+    if(!s_Errors.empty())
+    {
+        std::lock_guard<std::mutex> lockB(m_ErrorGuard);
+
+        for (auto & error : s_Errors)
+        {
+            Event_onError(this, error.ErrorCode, error.ErrorMessage);
+        }
+
+        s_Errors.clear();
+    }
+
+	if(!s_Disconnects.empty())
+	{
+		std::lock_guard<std::mutex> lockA(m_DisconnectsGuard);
+
+		for (auto & session : s_Disconnects)
+		{
+			if (session != nullptr && session->client != nullptr)
+			{
+				Event_onDisconnect(this);
+			}
+		}
+
+		s_Disconnects.clear();
+	}
+
+	if(!s_Quits.empty())
+	{
+		std::lock_guard<std::mutex> lockA(m_QuitsGuard);
+
+		for (auto & session : s_Quits)
+		{
+			if (session != nullptr && session->client != nullptr)
+			{
+				Event_onQuit(this);
+			}
+		}
+
+		s_Quits.clear();
 	}
 }
 
@@ -191,6 +233,18 @@ void CSession::runSleepy(std::string token) {
 unsigned short int CSession::GetConnID()
 {
 	return connID;
+}
+
+// ------------------------------------------------------------------------------------------------
+bool CSession::GetErrorEventEnabled()
+{
+    return errorEventEnabled;
+}
+
+// ------------------------------------------------------------------------------------------------
+void CSession::SetErrorEventEnabled(bool toggle)
+{
+    errorEventEnabled = toggle;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -620,6 +674,8 @@ void Register_CSession(Sqrat::Table discordcn)
 		Class< CSession, NoCopy< CSession > >(discordcn.GetVM(), "CSession")
 
 		.Prop("ConnID", &CSession::GetConnID)
+		.Prop("ErrorEventEnabled", &CSession::GetErrorEventEnabled, &CSession::SetErrorEventEnabled)
+
 		.Func("Disconnect", &CSession::Disconnect)
 
 		.SquirrelFunc("Connect", &CSession::Connect)

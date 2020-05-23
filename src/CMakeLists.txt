@@ -1,20 +1,20 @@
 add_library(SqDiscord SHARED
-	CallbackHandler.cpp
-	CallbackHandler.h
-   	CDiscord.cpp
-	CDiscord.h
-	CSession.cpp
-	CSession.h
-	CMessage.cpp
-	CMessage.h
-	DEmbed.cpp
-	DEmbed.h
-	Functions.cpp
-	Functions.h
-	main.cpp
-	main.h
-	SQFunctions.cpp
-)
+		CallbackHandler.cpp
+		CallbackHandler.h
+		CDiscord.cpp
+		CDiscord.h
+		CSession.cpp
+		CSession.h
+		CError.h
+		CMessage.h
+		DEmbed.cpp
+		DEmbed.h
+		Functions.cpp
+		Functions.h
+		main.cpp
+		main.h
+		SQFunctions.cpp
+		)
 
 # Force 32-bit binaries when necessary
 if(FORCE_32BIT_BIN)
