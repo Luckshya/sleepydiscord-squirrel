@@ -1,9 +1,9 @@
 #pragma once
 
 #if defined(_MSC_VER)
-	#define EXPORT	extern "C" __declspec(dllexport)
+#define EXPORT    extern "C" __declspec(dllexport)
 #elif defined(__GNUC__)
-	#define EXPORT	extern "C"
+#define EXPORT	extern "C"
 #endif
 
 // ------------------------------------------------------------------------------------------------
@@ -20,25 +20,24 @@
 
 // A definition needed for Squirrel's print function
 #ifdef SQUNICODE
-	#define scvprintf vwprintf
+#define scvprintf vwprintf
 #else
-	#define scvprintf vprintf
+#define scvprintf vprintf
 #endif
 
 // ------------------------------------------------------------------------------------------------
-namespace SqDiscord
-{
+namespace SqDiscord {
 // ------------------------------------------------------------------------------------------------
-void OutputDebug(const char * msg);
+void OutputDebug(const char *msg);
 
 // ------------------------------------------------------------------------------------------------
-void OutputMsg(const char * msg);
+void OutputMsg(const char *msg);
 
 // ------------------------------------------------------------------------------------------------
-void OutputErr(const char * msg);
+void OutputErr(const char *msg);
 
 // ------------------------------------------------------------------------------------------------
-void OutputWarn(const char * msg);
+void OutputWarn(const char *msg);
 
 // ------------------------------------------------------------------------------------------------
 } // Namespace - SqDiscord

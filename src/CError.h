@@ -4,18 +4,17 @@
 #include <string>
 
 // ------------------------------------------------------------------------------------------------
-namespace SqDiscord
-{
+namespace SqDiscord {
 // ------------------------------------------------------------------------------------------------
 class CError {
 public:
-    int ErrorCode;
-    std::string ErrorMessage;
+	int ErrorCode;
+	std::string ErrorMessage;
 
-    CError(int ErrorCode, std::string ErrorMessage) {
-        this->ErrorCode = ErrorCode;
-        this->ErrorMessage = std::move(ErrorMessage);
-    }
+	CError(int ErrorCode, std::string ErrorMessage) {
+		this->ErrorCode = ErrorCode;
+		this->ErrorMessage = std::move(ErrorMessage);
+	}
 };
 
 } // Namespace:: SqDiscord

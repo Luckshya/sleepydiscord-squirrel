@@ -5,128 +5,104 @@
 #include "CDiscord.h"
 
 // ------------------------------------------------------------------------------------------------
-namespace SqDiscord
-{
+namespace SqDiscord {
 // variable to hold in case on one connection only
-CSession * s_Session = nullptr;
+CSession *s_Session = nullptr;
 
 // container to hold connections
-std::vector< CSession* > s_Sessions;
+std::vector<CSession *> s_Sessions;
 
 // ------------------------------------------------------------------------------------------------
-CSession::CSession()
-{
-	try
-	{
-		if (!s_Session && s_Sessions.empty())
-		{
+CSession::CSession() {
+	try {
+		if (!s_Session && s_Sessions.empty()) {
 			s_Session = this;
 			connID = 0;
 		}
-		// Is this the second session instance?
-		else if (s_Sessions.empty())
-		{
+			// Is this the second session instance?
+		else if (s_Sessions.empty()) {
 			s_Sessions.push_back(s_Session);
 			s_Session = nullptr;
 			s_Sessions.push_back(this);
 			connID = 1;
 		}
-		// This is part of multiple session instances
-		else
-		{
+			// This is part of multiple session instances
+		else {
 			connID = s_Sessions.size();
 			s_Sessions.push_back(this);
 		}
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [CSession]");
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::Process()
-{
+void CSession::Process() {
 	// Do we only have one Discord session?
-	if (s_Session)
-	{
+	if (s_Session) {
 		s_Session->Update();
 	}
-	// Do we have multiple sessions?
-	else if (!s_Sessions.empty())
-	{
-		for (auto & session : s_Sessions)
-		{
-            session->Update();
+		// Do we have multiple sessions?
+	else if (!s_Sessions.empty()) {
+		for (auto &session : s_Sessions) {
+			session->Update();
 		}
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::Update()
-{
-	if (!client)
-	{
+void CSession::Update() {
+	if (!client) {
 		return;
 	}
 
-	if (!client->session)
-	{
+	if (!client->session) {
 		return;
 	}
 
-	if (!isConnected)
-	{
+	if (!isConnected) {
 		return;
 	}
 
-	if(!s_ReadySession.empty())
-	{
+	if (!s_ReadySession.empty()) {
 		std::lock_guard<std::mutex> lockA(m_ReadyGuard);
 
-		for (auto & session : s_ReadySession)
-		{
-			if (session != nullptr && session->client != nullptr)
-			{
+		for (auto &session : s_ReadySession) {
+			if (session != nullptr && session->client != nullptr) {
 				Event_onReady(this);
 			}
 		}
 
 		s_ReadySession.clear();
 	}
-	
-	if(!s_Messages.empty())
-	{
+
+	if (!s_Messages.empty()) {
 		std::lock_guard<std::mutex> lockB(m_MsgGuard);
 
-		for (auto & message : s_Messages)
-		{
-			Event_onMessage(this, message.channelID, message.author, message.authorNick, message.authorID, message.roles, message.message);
+		for (auto &message : s_Messages) {
+			Event_onMessage(this, message.channelID, message.author, message.authorNick, message.authorID,
+							message.roles, message.message);
 		}
 
 		s_Messages.clear();
 	}
 
-    if(!s_Errors.empty())
-    {
-        std::lock_guard<std::mutex> lockB(m_ErrorGuard);
+	if (!s_Errors.empty()) {
+		std::lock_guard<std::mutex> lockB(m_ErrorGuard);
 
-        for (auto & error : s_Errors)
-        {
-            Event_onError(this, error.ErrorCode, error.ErrorMessage);
-        }
+		for (auto &error : s_Errors) {
+			Event_onError(this, error.ErrorCode, error.ErrorMessage);
+		}
 
-        s_Errors.clear();
-    }
+		s_Errors.clear();
+	}
 
-	if(!s_Disconnects.empty())
-	{
+	if (!s_Disconnects.empty()) {
 		std::lock_guard<std::mutex> lockA(m_DisconnectsGuard);
 
-		for (auto & session : s_Disconnects)
-		{
-			if (session != nullptr && session->client != nullptr)
-			{
+		for (auto &session : s_Disconnects) {
+			if (session != nullptr && session->client != nullptr) {
 				Event_onDisconnect(this);
 			}
 		}
@@ -134,14 +110,11 @@ void CSession::Update()
 		s_Disconnects.clear();
 	}
 
-	if(!s_Quits.empty())
-	{
+	if (!s_Quits.empty()) {
 		std::lock_guard<std::mutex> lockA(m_QuitsGuard);
 
-		for (auto & session : s_Quits)
-		{
-			if (session != nullptr && session->client != nullptr)
-			{
+		for (auto &session : s_Quits) {
+			if (session != nullptr && session->client != nullptr) {
 				Event_onQuit(this);
 			}
 		}
@@ -151,21 +124,19 @@ void CSession::Update()
 }
 
 // ------------------------------------------------------------------------------------------------
-SQInteger CSession::Connect(HSQUIRRELVM vm)
-{
+SQInteger CSession::Connect(HSQUIRRELVM vm) {
 	const int top = sq_gettop(vm);
 
-	if (top <= 1)
-	{
+	if (top <= 1) {
 		return sq_throwerror(vm, "Missing the token value");
 	}
 
-	CSession * session = nullptr;
+	CSession *session = nullptr;
 
 	try {
-		session = Sqrat::Var< CSession * >(vm, 1).value;
+		session = Sqrat::Var<CSession *>(vm, 1).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
@@ -182,18 +153,15 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 	}
 
 	CCStr token = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 2, &token)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 2, &token))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
-	try
-	{
+	try {
 		// initialize the connection
 		session->sleepyThread = new std::thread(&CSession::runSleepy, session, std::string(token));
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [Connect]");
 	}
 
@@ -202,8 +170,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm)
 
 // ------------------------------------------------------------------------------------------------
 void CSession::runSleepy(std::string token) {
-	try
-	{
+	try {
 		{
 			std::lock_guard<std::mutex> lock(m_Guard);
 
@@ -223,84 +190,67 @@ void CSession::runSleepy(std::string token) {
 
 		client->run();
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [runSleepy]");
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned short int CSession::GetConnID()
-{
+unsigned short int CSession::GetConnID() {
 	return connID;
 }
 
 // ------------------------------------------------------------------------------------------------
-bool CSession::GetErrorEventEnabled()
-{
-    return errorEventEnabled;
+bool CSession::GetErrorEventEnabled() {
+	return errorEventEnabled;
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::SetErrorEventEnabled(bool toggle)
-{
-    errorEventEnabled = toggle;
+void CSession::SetErrorEventEnabled(bool toggle) {
+	errorEventEnabled = toggle;
 }
 
 // ------------------------------------------------------------------------------------------------
-SQInteger CSession::Message(HSQUIRRELVM vm)
-{
+SQInteger CSession::Message(HSQUIRRELVM vm) {
 	const int top = sq_gettop(vm);
 
-	if (top <= 1)
-	{
+	if (top <= 1) {
 		return sq_throwerror(vm, "Missing the channel ID value");
-	}
-
-	else if (top <= 2)
-	{
+	} else if (top <= 2) {
 		return sq_throwerror(vm, "Missing the message value");
 	}
 
-	CSession * session = nullptr;
+	CSession *session = nullptr;
 
 	try {
-		session = Sqrat::Var< CSession * >(vm, 1).value;
+		session = Sqrat::Var<CSession *>(vm, 1).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
 	if (!session) {
 		return sq_throwerror(vm, "Invalid session instance");
-	}
-
-	else if (!session->client) {
+	} else if (!session->client) {
 		return sq_throwerror(vm, "Invalid Discord client");
-	}
-
-	else if (!session->isConnected) {
+	} else if (!session->isConnected) {
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
 	CCStr channelID = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 2, &channelID))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
 	CCStr message = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 3, &message)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 3, &message))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
 	}
 
-	try
-	{
+	try {
 		auto msg = session->client->sendMessage(channelID, message, SleepyDiscord::Async);
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [Message]");
 	}
 
@@ -308,52 +258,40 @@ SQInteger CSession::Message(HSQUIRRELVM vm)
 }
 
 // ------------------------------------------------------------------------------------------------
-SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
-{
+SQInteger CSession::MessageEmbed(HSQUIRRELVM vm) {
 	const int top = sq_gettop(vm);
 
-	if (top <= 1)
-	{
+	if (top <= 1) {
 		return sq_throwerror(vm, "Missing the channel ID value");
-	}
-
-	else if (top <= 2)
-	{
+	} else if (top <= 2) {
 		return sq_throwerror(vm, "Missing the content value");
-	}
-
-	else if (top <= 3)
-	{
+	} else if (top <= 3) {
 		return sq_throwerror(vm, "Missing the Embed value");
 	}
 
-	CSession * session = nullptr;
+	CSession *session = nullptr;
 
 	try {
-		session = Sqrat::Var< CSession * >(vm, 1).value;
+		session = Sqrat::Var<CSession *>(vm, 1).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
 	if (!session) {
 		return sq_throwerror(vm, "Invalid session instance");
-	}
-
-	else if (!session->client) {
+	} else if (!session->client) {
 		return sq_throwerror(vm, "Invalid Discord client");
-	}
-
-	else if (!session->isConnected) {
+	} else if (!session->isConnected) {
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
-	Embed * embed = nullptr;
+	Embed *embed = nullptr;
 
 	try {
-		embed = Sqrat::Var< Embed * >(vm, 4).value;
+		embed = Sqrat::Var<Embed *>(vm, 4).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
@@ -362,23 +300,19 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 	}
 
 	CCStr channelID = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 2, &channelID))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
 	CCStr content = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 3, &content)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 3, &content))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
 	}
 
-	try
-	{
+	try {
 		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), false, SleepyDiscord::Async);
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [MessageEmbed]");
 	}
 
@@ -386,78 +320,67 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm)
 }
 
 // ------------------------------------------------------------------------------------------------
-SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
-{
+SQInteger CSession::GetRoleName(HSQUIRRELVM vm) {
 	const int top = sq_gettop(vm);
 
-	if (top <= 1)
-	{
+	if (top <= 1) {
 		return sq_throwerror(vm, "Missing the server ID value");
-	}
-
-	else if (top <= 2)
-	{
+	} else if (top <= 2) {
 		return sq_throwerror(vm, "Missing the role ID value");
 	}
 
-	CSession * session = nullptr;
+	CSession *session = nullptr;
 
 	try {
-		session = Sqrat::Var< CSession * >(vm, 1).value;
+		session = Sqrat::Var<CSession *>(vm, 1).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
 	if (!session) {
 		return sq_throwerror(vm, "Invalid session instance");
-	}
-
-	else if (!session->client) {
+	} else if (!session->client) {
 		return sq_throwerror(vm, "Invalid Discord client");
-	}
-
-	else if (!session->isConnected) {
+	} else if (!session->isConnected) {
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
 	CCStr serverID = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 2, &serverID)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 2, &serverID))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
 	CCStr roleID = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 3, &roleID)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 3, &roleID))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
 	}
 
 	try {
-        std::string s_serverID = std::string(serverID);
+		std::string s_serverID = std::string(serverID);
 
-        auto rolesIndex = session->client->s_servers.find(std::string(serverID));
+		auto rolesIndex = session->client->s_servers.find(std::string(serverID));
 
-        if(rolesIndex == session->client->s_servers.end()) {
-            return sq_throwerror(vm, "Invalid server ID");
-        }
+		if (rolesIndex == session->client->s_servers.end()) {
+			return sq_throwerror(vm, "Invalid server ID");
+		}
 
-        std::list<SleepyDiscord::Role>& roles = (rolesIndex->second).roles;
-        bool found = false;
-        CCStr role_name = nullptr;
+		std::list<SleepyDiscord::Role> &roles = (rolesIndex->second).roles;
+		bool found = false;
+		CCStr role_name = nullptr;
 
-        for (const auto & role : roles) {
-            if (role.ID.string() == std::string(roleID)) {
-                found = true;
-                role_name = role.name.c_str();
-                sq_pushstring(vm, role_name, -1);
-                break;
-            }
-        }
+		for (const auto &role : roles) {
+			if (role.ID.string() == std::string(roleID)) {
+				found = true;
+				role_name = role.name.c_str();
+				sq_pushstring(vm, role_name, -1);
+				break;
+			}
+		}
 
-        if (!found) {
-            return sq_throwerror(vm, "Invalid role ID");
-        }
+		if (!found) {
+			return sq_throwerror(vm, "Invalid role ID");
+		}
 	}
 	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [RoleName]");
@@ -468,106 +391,86 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm)
 
 // ------------------------------------------------------------------------------------------------
 SQInteger CSession::EditChannel(HSQUIRRELVM vm) {
-    const int top = sq_gettop(vm);
-
-    if (top <= 1)
-    {
-        return sq_throwerror(vm, "Missing the channel ID value");
-    }
-
-    else if (top <= 2)
-    {
-        return sq_throwerror(vm, "Missing the channel name value");
-    }
-
-    else if (top <= 3)
-    {
-        return sq_throwerror(vm, "Missing the channel topic value");
-    }
-
-    CSession * session = nullptr;
-
-    try {
-        session = Sqrat::Var< CSession * >(vm, 1).value;
-    }
-    catch (const Sqrat::Exception& e) {
-        return sq_throwerror(vm, e.what());
-    }
-
-    if (!session) {
-        return sq_throwerror(vm, "Invalid session instance");
-    }
-
-    else if (!session->client) {
-        return sq_throwerror(vm, "Invalid Discord client");
-    }
-
-    else if (!session->isConnected) {
-        return sq_throwerror(vm, "Session is not connected");
-    }
-
-    CCStr channelID = nullptr;
-    if (SQ_FAILED(sq_getstring(vm, 2, &channelID)))
-    {
-        return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
-    }
-
-    CCStr name = nullptr;
-    if (SQ_FAILED(sq_getstring(vm, 3, &name)))
-    {
-        return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
-    }
-
-    CCStr topic = nullptr;
-    if (SQ_FAILED(sq_getstring(vm, 4, &topic)))
-    {
-        return sq_throwerror(vm, "Failed to retrieve argument 3 as string");
-    }
-
-    try {
-        auto response = session->client->editChannel(std::string(channelID), std::string(name), std::string(topic), SleepyDiscord::Async);
-    }
-    catch (...) {
-        OutputErr("An Error has occured at [CSession] function => [EditChannel]");
-    }
-
-    return 0;
-}
-
-// ------------------------------------------------------------------------------------------------
-SQInteger CSession::SetActivity(HSQUIRRELVM vm)
-{
 	const int top = sq_gettop(vm);
 
-	if (top <= 1)
-	{
-		return sq_throwerror(vm, "Missing the activity value");
+	if (top <= 1) {
+		return sq_throwerror(vm, "Missing the channel ID value");
+	} else if (top <= 2) {
+		return sq_throwerror(vm, "Missing the channel name value");
+	} else if (top <= 3) {
+		return sq_throwerror(vm, "Missing the channel topic value");
 	}
 
-	CSession * session = nullptr;
+	CSession *session = nullptr;
 
 	try {
-		session = Sqrat::Var< CSession * >(vm, 1).value;
+		session = Sqrat::Var<CSession *>(vm, 1).value;
 	}
-	catch (const Sqrat::Exception& e) {
+	catch (const Sqrat::Exception &e) {
 		return sq_throwerror(vm, e.what());
 	}
 
 	if (!session) {
 		return sq_throwerror(vm, "Invalid session instance");
-	}
-
-	else if (!session->client) {
+	} else if (!session->client) {
 		return sq_throwerror(vm, "Invalid Discord client");
+	} else if (!session->isConnected) {
+		return sq_throwerror(vm, "Session is not connected");
 	}
 
-	else if (!session->isConnected) {
+	CCStr channelID = nullptr;
+	if (SQ_FAILED(sq_getstring(vm, 2, &channelID))) {
+		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
+	}
+
+	CCStr name = nullptr;
+	if (SQ_FAILED(sq_getstring(vm, 3, &name))) {
+		return sq_throwerror(vm, "Failed to retrieve argument 2 as string");
+	}
+
+	CCStr topic = nullptr;
+	if (SQ_FAILED(sq_getstring(vm, 4, &topic))) {
+		return sq_throwerror(vm, "Failed to retrieve argument 3 as string");
+	}
+
+	try {
+		auto response = session->client->editChannel(std::string(channelID), std::string(name), std::string(topic),
+													 SleepyDiscord::Async);
+	}
+	catch (...) {
+		OutputErr("An Error has occured at [CSession] function => [EditChannel]");
+	}
+
+	return 0;
+}
+
+// ------------------------------------------------------------------------------------------------
+SQInteger CSession::SetActivity(HSQUIRRELVM vm) {
+	const int top = sq_gettop(vm);
+
+	if (top <= 1) {
+		return sq_throwerror(vm, "Missing the activity value");
+	}
+
+	CSession *session = nullptr;
+
+	try {
+		session = Sqrat::Var<CSession *>(vm, 1).value;
+	}
+	catch (const Sqrat::Exception &e) {
+		return sq_throwerror(vm, e.what());
+	}
+
+	if (!session) {
+		return sq_throwerror(vm, "Invalid session instance");
+	} else if (!session->client) {
+		return sq_throwerror(vm, "Invalid Discord client");
+	} else if (!session->isConnected) {
 		return sq_throwerror(vm, "Session is not connected");
 	}
 
 	CCStr activity = nullptr;
-	if (SQ_FAILED(sq_getstring(vm, 2, &activity)))
-	{
+	if (SQ_FAILED(sq_getstring(vm, 2, &activity))) {
 		return sq_throwerror(vm, "Failed to retrieve argument 1 as string");
 	}
 
@@ -582,44 +485,37 @@ SQInteger CSession::SetActivity(HSQUIRRELVM vm)
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::Disconnect()
-{
-	try
-	{
+void CSession::Disconnect() {
+	try {
 		std::lock_guard<std::mutex> lock(m_Guard);
 
-		if (client != nullptr)
-		{
+		if (client != nullptr) {
 			client->quit();
 
-			if (sleepyThread != nullptr)
-			{
+			if (sleepyThread != nullptr) {
 				sleepyThread->join();
 				delete sleepyThread;
 				sleepyThread = nullptr;
 			}
 
-			isConnected		= false;
-			isConnecting	= false;
+			isConnected = false;
+			isConnecting = false;
 
 			delete client;
 			client = nullptr;
 		}
 	}
-	catch(...)
-	{
+	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [Disconnect]");
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::Destroy()
-{
+void CSession::Destroy() {
 	{
 		std::lock_guard<std::mutex> lock(m_Guard);
 
-		if (!client)
-		{
+		if (!client) {
 			return;
 		}
 	}
@@ -629,61 +525,53 @@ void CSession::Destroy()
 }
 
 // ------------------------------------------------------------------------------------------------
-CSession::~CSession()
-{
+CSession::~CSession() {
 	Destroy();
 
 	// Attempt to find our self in the session pool
 	auto itr = std::find(s_Sessions.begin(), s_Sessions.end(), this);
 	// Are we in the pool?
-	if (itr != s_Sessions.end())
-	{
+	if (itr != s_Sessions.end()) {
 		s_Sessions.erase(itr); /* Remove our self from the pool. */
 	}
 	// Is there a single session and that's us?
-	if (s_Session == this)
-	{
+	if (s_Session == this) {
 		s_Session = nullptr;
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void CSession::Terminate()
-{
+void CSession::Terminate() {
 	// Do we only have one Discord session?
-	if (s_Session)
-	{
+	if (s_Session) {
 		s_Session->Destroy(); /* This should do the job. */
 	}
-	// Do we have multiple sessions?
-	else if (!s_Sessions.empty())
-	{
-		for (auto & session : s_Sessions)
-		{
-            session->Destroy();
+		// Do we have multiple sessions?
+	else if (!s_Sessions.empty()) {
+		for (auto &session : s_Sessions) {
+			session->Destroy();
 		}
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void Register_CSession(Sqrat::Table discordcn)
-{
+void Register_CSession(Sqrat::Table discordcn) {
 	using namespace Sqrat;
 
 	discordcn.Bind("CSession",
-		Class< CSession, NoCopy< CSession > >(discordcn.GetVM(), "CSession")
+				   Class<CSession, NoCopy<CSession> >(discordcn.GetVM(), "CSession")
 
-		.Prop("ConnID", &CSession::GetConnID)
-		.Prop("ErrorEventEnabled", &CSession::GetErrorEventEnabled, &CSession::SetErrorEventEnabled)
+						   .Prop("ConnID", &CSession::GetConnID)
+						   .Prop("ErrorEventEnabled", &CSession::GetErrorEventEnabled, &CSession::SetErrorEventEnabled)
 
-		.Func("Disconnect", &CSession::Disconnect)
+						   .Func("Disconnect", &CSession::Disconnect)
 
-		.SquirrelFunc("Connect", &CSession::Connect)
-		.SquirrelFunc("Message", &CSession::Message)
-		.SquirrelFunc("MessageEmbed", &CSession::MessageEmbed)
-		.SquirrelFunc("GetRoleName", &CSession::GetRoleName)
-		.SquirrelFunc("EditChannel", &CSession::EditChannel)
-		.SquirrelFunc("SetActivity", &CSession::SetActivity)
+						   .SquirrelFunc("Connect", &CSession::Connect)
+						   .SquirrelFunc("Message", &CSession::Message)
+						   .SquirrelFunc("MessageEmbed", &CSession::MessageEmbed)
+						   .SquirrelFunc("GetRoleName", &CSession::GetRoleName)
+						   .SquirrelFunc("EditChannel", &CSession::EditChannel)
+						   .SquirrelFunc("SetActivity", &CSession::SetActivity)
 	);
 }
 } // Namespace - SqDiscord

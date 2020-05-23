@@ -8,41 +8,34 @@
 using namespace Sqrat;
 
 // ------------------------------------------------------------------------------------------------
-namespace SqDiscord
-{
+namespace SqDiscord {
 // ------------------------------------------------------------------------------------------------
-void Event_onReady(CSession * session)
-{
+void Event_onReady(CSession *session) {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
 	Function callback = RootTable(vm).GetFunction("onDiscord_Ready");
 
-	if (callback.IsNull())
-	{
+	if (callback.IsNull()) {
 		callback.Release();
 		return;
 	}
 
-	try
-	{
+	try {
 		callback.Execute(session);
 	}
-	catch (Sqrat::Exception& e)
-	{
+	catch (Sqrat::Exception &e) {
 		std::ostringstream error;
 		error << "Discord event [READY] => Squirrel error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (const std::exception& e)
-	{
+	catch (const std::exception &e) {
 		std::ostringstream error;
 		error << "Discord event [READY] => Program error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("Discord event [READY] => Unknown error");
 	}
 
@@ -50,22 +43,20 @@ void Event_onReady(CSession * session)
 }
 
 // ------------------------------------------------------------------------------------------------
-void Event_onMessage(CSession * session, CString channelID, CString author, CString authorNick, CString authorID, s_Roles roles, CString message)
-{
+void Event_onMessage(CSession *session, CString channelID, CString author, CString authorNick, CString authorID,
+					 s_Roles roles, CString message) {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
 	Function callback = RootTable(vm).GetFunction("onDiscord_Message");
 
-	if (callback.IsNull())
-	{
+	if (callback.IsNull()) {
 		callback.Release();
 		return;
 	}
 
 	const int top = sq_gettop(vm);
 
-	try
-	{
+	try {
 		sq_pushobject(vm, callback.GetFunc());
 		sq_pushobject(vm, callback.GetEnv());
 
@@ -77,7 +68,7 @@ void Event_onMessage(CSession * session, CString channelID, CString author, CStr
 
 		sq_newarray(vm, 0);
 
-		for (auto & role : roles) {
+		for (auto &role : roles) {
 			sq_pushstring(vm, role.string().c_str(), -1);
 			sq_arrayappend(vm, -2);
 		}
@@ -88,27 +79,23 @@ void Event_onMessage(CSession * session, CString channelID, CString author, CStr
 
 		sq_settop(vm, top);
 
-		if (SQ_FAILED(result))
-		{
+		if (SQ_FAILED(result)) {
 			throw Exception(LastErrorString(vm));
 		}
 	}
-	catch (Sqrat::Exception& e)
-	{
+	catch (Sqrat::Exception &e) {
 		std::ostringstream error;
 		error << "Discord event [MESSAGE] => Squirrel error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (const std::exception& e)
-	{
+	catch (const std::exception &e) {
 		std::ostringstream error;
 		error << "Discord event [MESSAGE] => Program error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("Discord event [MESSAGE] => Unknown error");
 	}
 
@@ -116,77 +103,65 @@ void Event_onMessage(CSession * session, CString channelID, CString author, CStr
 }
 
 // ------------------------------------------------------------------------------------------------
-void Event_onError(CSession * session, int errorCode, const std::string& errorMessage)
-{
-    HSQUIRRELVM vm = DefaultVM::Get();
-
-    Function callback = RootTable(vm).GetFunction("onDiscord_Error");
-
-    if (callback.IsNull())
-    {
-        callback.Release();
-        return;
-    }
-
-    try
-    {
-        callback.Execute(session, errorCode, errorMessage);
-    }
-    catch (Sqrat::Exception& e)
-    {
-        std::ostringstream error;
-        error << "Discord event [ERROR] => Squirrel error [" << e.what() << "]";
-
-        OutputErr(error.str().c_str());
-    }
-    catch (const std::exception& e)
-    {
-        std::ostringstream error;
-        error << "Discord event [ERROR] => Program error [" << e.what() << "]";
-
-        OutputErr(error.str().c_str());
-    }
-    catch (...)
-    {
-        OutputErr("Discord event [ERROR] => Unknown error");
-    }
-
-    callback.Release();
-}
-
-// ------------------------------------------------------------------------------------------------
-void Event_onDisconnect(CSession * session)
-{
+void Event_onError(CSession *session, int errorCode, const std::string &errorMessage) {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
-	Function callback = RootTable(vm).GetFunction("onDiscord_Disconnect");
+	Function callback = RootTable(vm).GetFunction("onDiscord_Error");
 
-	if (callback.IsNull())
-	{
+	if (callback.IsNull()) {
 		callback.Release();
 		return;
 	}
 
-	try
-	{
+	try {
+		callback.Execute(session, errorCode, errorMessage);
+	}
+	catch (Sqrat::Exception &e) {
+		std::ostringstream error;
+		error << "Discord event [ERROR] => Squirrel error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (const std::exception &e) {
+		std::ostringstream error;
+		error << "Discord event [ERROR] => Program error [" << e.what() << "]";
+
+		OutputErr(error.str().c_str());
+	}
+	catch (...) {
+		OutputErr("Discord event [ERROR] => Unknown error");
+	}
+
+	callback.Release();
+}
+
+// ------------------------------------------------------------------------------------------------
+void Event_onDisconnect(CSession *session) {
+	HSQUIRRELVM vm = DefaultVM::Get();
+
+	Function callback = RootTable(vm).GetFunction("onDiscord_Disconnect");
+
+	if (callback.IsNull()) {
+		callback.Release();
+		return;
+	}
+
+	try {
 		callback.Execute(session);
 	}
-	catch (Sqrat::Exception& e)
-	{
+	catch (Sqrat::Exception &e) {
 		std::ostringstream error;
 		error << "Discord event [DISCONNECT] => Squirrel error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (const std::exception& e)
-	{
+	catch (const std::exception &e) {
 		std::ostringstream error;
 		error << "Discord event [DISCONNECT] => Program error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("Discord event [DISCONNECT] => Unknown error");
 	}
 
@@ -194,38 +169,32 @@ void Event_onDisconnect(CSession * session)
 }
 
 // ------------------------------------------------------------------------------------------------
-void Event_onQuit(CSession * session)
-{
+void Event_onQuit(CSession *session) {
 	HSQUIRRELVM vm = DefaultVM::Get();
 
 	Function callback = RootTable(vm).GetFunction("onDiscord_Quit");
 
-	if (callback.IsNull())
-	{
+	if (callback.IsNull()) {
 		callback.Release();
 		return;
 	}
 
-	try
-	{
+	try {
 		callback.Execute(session);
 	}
-	catch (Sqrat::Exception& e)
-	{
+	catch (Sqrat::Exception &e) {
 		std::ostringstream error;
 		error << "Discord event [QUIT] => Squirrel error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (const std::exception& e)
-	{
+	catch (const std::exception &e) {
 		std::ostringstream error;
 		error << "Discord event [QUIT] => Program error [" << e.what() << "]";
 
 		OutputErr(error.str().c_str());
 	}
-	catch (...)
-	{
+	catch (...) {
 		OutputErr("Discord event [QUIT] => Unknown error");
 	}
 

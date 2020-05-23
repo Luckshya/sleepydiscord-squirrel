@@ -5,14 +5,12 @@
 
 // ------------------------------------------------------------------------------------------------
 SQInteger Regex_Match(HSQUIRRELVM vm) {
-	const SQChar * regex_string;
-	const SQChar * value_string;
+	const SQChar *regex_string;
+	const SQChar *value_string;
 
 	if (SQ_FAILED(sq_getstring(vm, 2, &regex_string))) {
 		return sq_throwerror(vm, "Unable to retrieve argument 1 as string");
-	}
-
-	else if (SQ_FAILED(sq_getstring(vm, 3, &value_string))) {
+	} else if (SQ_FAILED(sq_getstring(vm, 3, &value_string))) {
 		return sq_throwerror(vm, "Unable to retrieve argument 2 as string");
 	}
 
@@ -26,7 +24,7 @@ SQInteger Regex_Match(HSQUIRRELVM vm) {
 
 		sq_pushbool(vm, matches);
 	}
-	catch (std::regex_error& e) {
+	catch (std::regex_error &e) {
 		return sq_throwerror(vm, e.what());
 	}
 	catch (...) {
