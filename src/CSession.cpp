@@ -310,7 +310,7 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm) {
 	}
 
 	try {
-		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), false, SleepyDiscord::Async);
+		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), SleepyDiscord::TTS::Default, SleepyDiscord::Async);
 	}
 	catch (...) {
 		OutputErr("An Error has occured at [CSession] function => [MessageEmbed]");
