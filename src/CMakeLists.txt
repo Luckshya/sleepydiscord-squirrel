@@ -1,20 +1,30 @@
 add_library(SqDiscord SHARED
-        CallbackHandler.cpp
-        CallbackHandler.h
+        EventHandler.h
+        Common.hpp
+        Common.cpp
+        Constants.h
+        Constants.cpp
         CDiscord.cpp
         CDiscord.h
         CSession.cpp
         CSession.h
-        CError.h
-        CMessage.h
         DEmbed.cpp
         DEmbed.h
-        Functions.cpp
-        Functions.h
         main.cpp
         main.h
         SQFunctions.cpp
-        )
+        Guild.cpp
+        Guild.h
+        Role.cpp
+        Role.h
+        ServerMember.cpp
+        ServerMember.h
+        Channel.cpp
+        Channel.h
+        User.cpp
+        User.h
+        Message.cpp
+        Message.h)
 
 # Force 32-bit binaries when necessary
 if (FORCE_32BIT_BIN)
@@ -48,8 +58,9 @@ endif (WIN32)
 
 target_include_directories(SqDiscord
         PRIVATE
-        ${PROJECT_SOURCE_DIR}/src
-        ${PROJECT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/readerwriterqueue
         )
 
 target_link_libraries(SqDiscord sleepy-discord)
