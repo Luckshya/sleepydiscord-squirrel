@@ -1,8 +1,15 @@
 // Main include
+#include "Common.hpp"
 #include "main.h"
 #include "DEmbed.h"
 #include "CSession.h"
-#include "Functions.h"
+#include "Constants.h"
+#include "Channel.h"
+#include "Guild.h"
+#include "Role.h"
+#include "ServerMember.h"
+#include "User.h"
+#include "Message.h"
 
 #if defined(WIN32) || defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -12,7 +19,6 @@
 #endif
 
 // Module imports
-#include "Functions.h"
 #include "SqImports.h"
 
 // Definitions
@@ -24,6 +30,7 @@ PluginFuncs *gFuncs;
 
 // ------------------------------------------------------------------------------------------------
 using namespace SqDiscord;
+using namespace Sqrat;
 
 // ------------------------------------------------------------------------------------------------
 uint8_t SqDiscord_OnSquirrelScriptLoad() {
@@ -32,7 +39,7 @@ uint8_t SqDiscord_OnSquirrelScriptLoad() {
 	int sqId = gFuncs->FindPlugin("SQHost2");
 	// Is there a squirrel host plugin?
 	if (sqId < 0) {
-		OutputMsg("Unable to locate the host plug-in");
+		OutputMessage("Unable to locate the host plug-in");
 		return 0;
 	}
 	const void **sqExports = gFuncs->GetPluginExports(sqId, &size);
@@ -51,24 +58,31 @@ uint8_t SqDiscord_OnSquirrelScriptLoad() {
 			sq = *(sqFuncs->GetSquirrelAPI());
 			v = *(sqFuncs->GetSquirrelVM());
 
-			Sqrat::ErrorHandling::Enable(true);
-			Sqrat::DefaultVM::Set(v);
+			ErrorHandling::Enable(true);
+			DefaultVM::Set(v);
 
-			Sqrat::Table discordcn(v);
-			Sqrat::Table embeds(v);
+			Table discordcn(v);
+			Table embeds(v);
 
-			Sqrat::RootTable(v).Bind("SqDiscord", discordcn);
-			SqDiscord::Register_CSession(discordcn);
+			CSession::DRegister_CSession(discordcn);
+			Channel::Register_Channel(discordcn);
+			Guild::Register_Guild(discordcn);
+			Role::Register_Role(discordcn);
+			ServerMember::Register_ServerMember(discordcn);
+			User::Register_User(discordcn);
+			Message::Register_Message(discordcn);
+			DRegister_Constants(discordcn);
 
-			SqDiscord::Register_Embeds(embeds);
+			Register_Embeds(embeds);
 			discordcn.Bind("Embed", embeds);
+			RootTable(v).Bind("SqDiscord", discordcn);
 
-			Sqrat::RootTable(v).SquirrelFunc("Regex_Match", &Regex_Match);
+			RootTable(v).SquirrelFunc("Regex_Match", &Regex_Match);
 
 			return 1;
 		}
 	} else {
-		OutputMsg("Failed to attach to SQHost2.");
+		OutputMessage("Failed to attach to SQHost2.");
 	}
 	return 0;
 }
@@ -88,7 +102,7 @@ uint8_t SqDiscord_OnPluginCommand(uint32_t command_identifier, const char * /*me
 // ------------------------------------------------------------------------------------------------
 uint8_t SqDiscord_OnServerInitialise() {
 	printf("\n");
-	OutputMsg("Loaded Discord Connector for VC:MP 0.4 by Luckshya.");
+	OutputMessage("Loaded Discord Module for VC:MP 0.4 by Luckshya.");
 
 	return 1;
 }
@@ -109,7 +123,7 @@ EXPORT unsigned int VcmpPluginInit(PluginFuncs *functions, PluginCallbacks *call
 	info->pluginVersion = 0x1001; // 1.0.01
 	info->apiMajorVersion = PLUGIN_API_MAJOR;
 	info->apiMinorVersion = PLUGIN_API_MINOR;
-	sprintf(info->name, "%s", "Discord for VC:MP");
+	sprintf(info->name, "%s", "Discord Module for VC:MP");
 
 	// Store functions for later use
 	gFuncs = functions;
@@ -123,68 +137,3 @@ EXPORT unsigned int VcmpPluginInit(PluginFuncs *functions, PluginCallbacks *call
 	// Done!
 	return 1;
 }
-
-// ------------------------------------------------------------------------------------------------
-namespace SqDiscord {
-// ------------------------------------------------------------------------------------------------
-void OutputDebug(const char *msg) {
-#ifdef _DEBUG
-	OutputMsg(msg);
-#endif
-}
-
-// ------------------------------------------------------------------------------------------------
-void OutputMsg(const char *msg) {
-#if defined(WIN32) || defined(_WIN32)
-	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	CONSOLE_SCREEN_BUFFER_INFO csbBefore;
-	GetConsoleScreenBufferInfo(hstdout, &csbBefore);
-	SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
-	printf("[MODULE]  ");
-
-	SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY);
-	printf("%s\n", msg);
-
-	SetConsoleTextAttribute(hstdout, csbBefore.wAttributes);
-#else
-	printf("%c[0;32m[MODULE]%c[0;37m %s\n", 27, 27, msg);
-#endif
-}
-
-void OutputErr(const char *msg) {
-#ifdef WIN32
-	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	CONSOLE_SCREEN_BUFFER_INFO csbBefore;
-	GetConsoleScreenBufferInfo(hstdout, &csbBefore);
-	SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_INTENSITY);
-	printf("[ERROR]  ");
-
-	SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY);
-	printf("%s\n", msg);
-
-	SetConsoleTextAttribute(hstdout, csbBefore.wAttributes);
-#else
-	printf("%c[0;31m[ERROR]%c[0;37m %s\n", 27, 27, msg);
-#endif
-}
-
-void OutputWarn(const char *msg) {
-#ifdef WIN32
-	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	CONSOLE_SCREEN_BUFFER_INFO csbBefore;
-	GetConsoleScreenBufferInfo(hstdout, &csbBefore);
-	SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
-	std::cout << "[WARNING] ";
-
-	SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY);
-	std::cout << msg << std::endl;
-
-	SetConsoleTextAttribute(hstdout, csbBefore.wAttributes);
-#else
-	printf("%c[1;33m[WARNING]%c[0;37m %s\n", 27, 27, msg);
-#endif
-}
-} // Namespace - SqDiscord
