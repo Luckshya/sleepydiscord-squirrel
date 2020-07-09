@@ -1,8 +1,11 @@
 // ------------------------------------------------------------------------------------------------
-#include "CallbackHandler.h"
-#include "main.h"
-#include "DEmbed.h"
+#include "CSession.h"
+
+// ------------------------------------------------------------------------------------------------
+#include <utility>
 #include "CDiscord.h"
+#include "DEmbed.h"
+#include "EventHandler.h"
 
 // ------------------------------------------------------------------------------------------------
 namespace SqDiscord {
@@ -31,9 +34,11 @@ CSession::CSession() {
 			connID = s_Sessions.size();
 			s_Sessions.push_back(this);
 		}
+
+		s_EventHandler = new EventHandler();
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [CSession]");
+		OutputError("An Error has occured at [CSession] function => [CSession]");
 	}
 }
 
@@ -65,62 +70,17 @@ void CSession::Update() {
 		return;
 	}
 
-	if (!s_ReadySession.empty()) {
-		std::lock_guard<std::mutex> lockA(m_ReadyGuard);
-
-		for (auto &session : s_ReadySession) {
-			if (session != nullptr && session->client != nullptr) {
-				Event_onReady(this);
-			}
-		}
-
-		s_ReadySession.clear();
+	if (internalCacheEnabled) {
+		while (Servers_Queue.try_dequeue(LatestCopy_Servers)) {};
+		while (OtherChannels_Queue.try_dequeue(LatestCopy_OtherChannels)) {};
 	}
 
-	if (!s_Messages.empty()) {
-		std::lock_guard<std::mutex> lockB(m_MsgGuard);
+	s_EventHandler->PushEvents(this);
+}
 
-		for (auto &message : s_Messages) {
-			Event_onMessage(this, message.channelID, message.author, message.authorNick, message.authorID,
-							message.roles, message.message);
-		}
-
-		s_Messages.clear();
-	}
-
-	if (!s_Errors.empty()) {
-		std::lock_guard<std::mutex> lockB(m_ErrorGuard);
-
-		for (auto &error : s_Errors) {
-			Event_onError(this, error.ErrorCode, error.ErrorMessage);
-		}
-
-		s_Errors.clear();
-	}
-
-	if (!s_Disconnects.empty()) {
-		std::lock_guard<std::mutex> lockA(m_DisconnectsGuard);
-
-		for (auto &session : s_Disconnects) {
-			if (session != nullptr && session->client != nullptr) {
-				Event_onDisconnect(this);
-			}
-		}
-
-		s_Disconnects.clear();
-	}
-
-	if (!s_Quits.empty()) {
-		std::lock_guard<std::mutex> lockA(m_QuitsGuard);
-
-		for (auto &session : s_Quits) {
-			if (session != nullptr && session->client != nullptr) {
-				Event_onQuit(this);
-			}
-		}
-
-		s_Quits.clear();
-	}
+// ------------------------------------------------------------------------------------------------
+unsigned short int CSession::GetConnID() {
+	return connID;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -162,7 +122,7 @@ SQInteger CSession::Connect(HSQUIRRELVM vm) {
 		session->sleepyThread = new std::thread(&CSession::runSleepy, session, std::string(token));
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [Connect]");
+		OutputError("An Error has occured at [CSession] function => [Connect]");
 	}
 
 	return 0;
@@ -174,40 +134,41 @@ void CSession::runSleepy(std::string token) {
 		{
 			std::lock_guard<std::mutex> lock(m_Guard);
 
-			isConnecting = true;
-			client = new CDiscord(token);
-
-			/*auto intents = {
-                SleepyDiscord::Intent::SERVERS,
-                SleepyDiscord::Intent::SERVER_MESSAGES,
-                SleepyDiscord::Intent::SERVER_MEMBERS,
-                SleepyDiscord::Intent::DIRECT_MESSAGES
-			};
-
-			client->setIntents(intents);*/
+			this->isConnecting = true;
+			this->client = new CDiscord(std::move(token));
 			this->client->session = this;
 		}
 
 		client->run();
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [runSleepy]");
+		OutputError("An Error has occured at [CSession] function => [runSleepy]");
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned short int CSession::GetConnID() {
-	return connID;
-}
-
-// ------------------------------------------------------------------------------------------------
-bool CSession::GetErrorEventEnabled() {
+bool CSession::GetErrorEventEnabled() const {
 	return errorEventEnabled;
 }
 
 // ------------------------------------------------------------------------------------------------
 void CSession::SetErrorEventEnabled(bool toggle) {
 	errorEventEnabled = toggle;
+}
+
+// ------------------------------------------------------------------------------------------------
+bool CSession::GetInternalCacheEnabled() const {
+	return internalCacheEnabled;
+}
+
+// ------------------------------------------------------------------------------------------------
+void CSession::SetInternalCacheEnabled(bool toggle) {
+	if (isConnected || isConnecting) {
+		OutputError("Cannot toggle internal cache while already connected or connecting");
+		return;
+	}
+
+	internalCacheEnabled = toggle;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -251,7 +212,7 @@ SQInteger CSession::Message(HSQUIRRELVM vm) {
 		auto msg = session->client->sendMessage(channelID, message, SleepyDiscord::Async);
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [Message]");
+		OutputError("An Error has occured at [CSession] function => [Message]");
 	}
 
 	return 0;
@@ -310,10 +271,11 @@ SQInteger CSession::MessageEmbed(HSQUIRRELVM vm) {
 	}
 
 	try {
-		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), SleepyDiscord::TTS::Default, SleepyDiscord::Async);
+		auto msg = session->client->sendMessage(channelID, content, *(embed->embed), SleepyDiscord::TTS::Default,
+												SleepyDiscord::Async);
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [MessageEmbed]");
+		OutputError("An Error has occured at [CSession] function => [MessageEmbed]");
 	}
 
 	return 0;
@@ -359,20 +321,21 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm) {
 	try {
 		std::string s_serverID = std::string(serverID);
 
-		auto rolesIndex = session->client->s_servers.find(std::string(serverID));
+		auto rolesIndex = session->LatestCopy_Servers.find(std::string(serverID));
 
-		if (rolesIndex == session->client->s_servers.end()) {
-			return sq_throwerror(vm, "Invalid server ID");
+		if (rolesIndex == session->LatestCopy_Servers.end()) {
+			sq_pushnull(vm);
+			return 1;
 		}
 
-		std::list<SleepyDiscord::Role> &roles = (rolesIndex->second).roles;
+		auto &roles = (rolesIndex->second).Roles;
 		bool found = false;
 		CCStr role_name = nullptr;
 
 		for (const auto &role : roles) {
-			if (role.ID.string() == std::string(roleID)) {
+			if (role.second.ID == std::string(roleID)) {
 				found = true;
-				role_name = role.name.c_str();
+				role_name = role.second.Name.c_str();
 				sq_pushstring(vm, role_name, -1);
 				break;
 			}
@@ -383,7 +346,7 @@ SQInteger CSession::GetRoleName(HSQUIRRELVM vm) {
 		}
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [RoleName]");
+		OutputError("An Error has occured at [CSession] function => [RoleName]");
 	}
 
 	return 1;
@@ -438,7 +401,7 @@ SQInteger CSession::EditChannel(HSQUIRRELVM vm) {
 													 SleepyDiscord::Async);
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [EditChannel]");
+		OutputError("An Error has occured at [CSession] function => [EditChannel]");
 	}
 
 	return 0;
@@ -478,7 +441,7 @@ SQInteger CSession::SetActivity(HSQUIRRELVM vm) {
 		session->client->updateStatus(std::string(activity));
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [SetActivity]");
+		OutputError("An Error has occured at [CSession] function => [SetActivity]");
 	}
 
 	return 0;
@@ -487,6 +450,9 @@ SQInteger CSession::SetActivity(HSQUIRRELVM vm) {
 // ------------------------------------------------------------------------------------------------
 void CSession::Disconnect() {
 	try {
+		// Update events last time
+		Update();
+
 		std::lock_guard<std::mutex> lock(m_Guard);
 
 		if (client != nullptr) {
@@ -506,22 +472,18 @@ void CSession::Disconnect() {
 		}
 	}
 	catch (...) {
-		OutputErr("An Error has occured at [CSession] function => [Disconnect]");
+		OutputError("An Error has occured at [CSession] function => [Disconnect]");
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
 void CSession::Destroy() {
-	{
-		std::lock_guard<std::mutex> lock(m_Guard);
-
-		if (!client) {
-			return;
-		}
-	}
 
 	// Disconnect the session
 	Disconnect();
+
+	delete s_EventHandler;
+	s_EventHandler = nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -555,7 +517,29 @@ void CSession::Terminate() {
 }
 
 // ------------------------------------------------------------------------------------------------
-void Register_CSession(Sqrat::Table discordcn) {
+Object CSession::GetGuild(const std::string &serverID) {
+	auto serverIndex = LatestCopy_Servers.find(serverID);
+
+	if (serverIndex == LatestCopy_Servers.end()) {
+		return Object{};
+	}
+
+	return Object(serverIndex->second, SqVM());
+}
+
+// ------------------------------------------------------------------------------------------------
+Object CSession::GetOtherChannel(const std::string &channelID) {
+	auto channelIndex = LatestCopy_OtherChannels.find(channelID);
+
+	if (channelIndex == LatestCopy_OtherChannels.end()) {
+		return Object{};
+	}
+
+	return Object(channelIndex->second, SqVM());
+}
+
+// ------------------------------------------------------------------------------------------------
+void CSession::DRegister_CSession(Sqrat::Table &discordcn) {
 	using namespace Sqrat;
 
 	discordcn.Bind("CSession",
@@ -563,8 +547,12 @@ void Register_CSession(Sqrat::Table discordcn) {
 
 						   .Prop("ConnID", &CSession::GetConnID)
 						   .Prop("ErrorEventEnabled", &CSession::GetErrorEventEnabled, &CSession::SetErrorEventEnabled)
+						   .Prop("InternalCacheEnabled", &CSession::GetInternalCacheEnabled,
+								 &CSession::SetInternalCacheEnabled)
 
 						   .Func("Disconnect", &CSession::Disconnect)
+						   .Func("GetGuild", &CSession::GetGuild)
+						   .Func("GetOtherChannel", &CSession::GetOtherChannel)
 
 						   .SquirrelFunc("Connect", &CSession::Connect)
 						   .SquirrelFunc("Message", &CSession::Message)

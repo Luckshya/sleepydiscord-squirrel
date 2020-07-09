@@ -1,61 +1,48 @@
 #pragma once
 
 // ------------------------------------------------------------------------------------------------
-#include "sqrat.h"
-#include "CMessage.h"
-#include "CError.h"
+#include "Common.hpp"
+#include "Message.h"
+#include "Guild.h"
 
 // ------------------------------------------------------------------------------------------------
 #include <thread>
+#include <mutex>
+#include <readerwriterqueue.h>
 
 // ------------------------------------------------------------------------------------------------
-class CDiscord;
+using namespace DiscordEvent;
+using namespace moodycamel;
 
 // ------------------------------------------------------------------------------------------------
 namespace SqDiscord {
-typedef const char *CCStr;
-
 class CSession {
-public:
+private:
 	CDiscord *client = nullptr;
+
+	void runSleepy(std::string);
+
+public:
+	// --------------------------------------------------------------------------------------------
 	std::thread *sleepyThread = nullptr;
-	unsigned short int connID = 0;
+	EventHandler *s_EventHandler = nullptr;
+
+	//unsigned short int connID	= 0;
 	bool isConnecting = false;
 	bool isConnected = false;
 	bool errorEventEnabled = false;
+	bool internalCacheEnabled = true;
+
+	unsigned short int connID = 0;
 
 	// Mutex lock to guard while connecting and disconnecting
 	std::mutex m_Guard;
 
-	// Mutex lock to guard s_Messages container
-	std::mutex m_MsgGuard;
+	std::unordered_map<std::string, SqDiscord::Channel> LatestCopy_OtherChannels;
+	std::unordered_map<std::string, SqDiscord::Guild> LatestCopy_Servers;
 
-	// Mutex lock to guard s_ReadySessions container
-	std::mutex m_ReadyGuard;
-
-	// Mutex lock to guard s_Errors container
-	std::mutex m_ErrorGuard;
-
-	// Mutex lock to guard s_Disconnects container
-	std::mutex m_DisconnectsGuard;
-
-	// Mutex lock to guard s_Quits container
-	std::mutex m_QuitsGuard;
-
-	// Container to hold messages
-	std::vector<CMessage> s_Messages;
-
-	// Container to hold readyEvent to be called in a Queue
-	std::vector<CSession *> s_ReadySession;
-
-	// Container to hold error messages
-	std::vector<CError> s_Errors;
-
-	// Container to hold Disconnect Event to be called in a Queue
-	std::vector<CSession *> s_Disconnects;
-
-	// Container to hold Quit Event to be called in a Queue
-	std::vector<CSession *> s_Quits;
+	ReaderWriterQueue <std::unordered_map<std::string, SqDiscord::Channel>> OtherChannels_Queue;
+	ReaderWriterQueue <std::unordered_map<std::string, SqDiscord::Guild>> Servers_Queue;
 
 	CSession();
 
@@ -71,17 +58,23 @@ public:
 
 	void Update();
 
-	void runSleepy(std::string);
-
 	void Disconnect();
 
 	void Destroy();
 
 	unsigned short int GetConnID();
 
-	bool GetErrorEventEnabled();
+	Object GetGuild(const std::string &serverID);
+
+	Object GetOtherChannel(const std::string &channelID);
+
+	bool GetErrorEventEnabled() const;
 
 	void SetErrorEventEnabled(bool toggle);
+
+	bool GetInternalCacheEnabled() const;
+
+	void SetInternalCacheEnabled(bool toggle);
 
 	static SQInteger Connect(HSQUIRRELVM vm);
 
@@ -94,7 +87,7 @@ public:
 	static SQInteger EditChannel(HSQUIRRELVM vm);
 
 	static SQInteger SetActivity(HSQUIRRELVM vm);
-};
 
-void Register_CSession(Sqrat::Table discordcn);
-}
+	static void DRegister_CSession(Sqrat::Table &);
+};
+} //Namespace:: SqDiscord
