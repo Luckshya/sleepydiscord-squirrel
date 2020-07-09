@@ -66,6 +66,14 @@ public:
         sq_addref(vm, &obj);
     }
 
+	template<class T>
+	Object(T& instance, HSQUIRRELVM v) : vm(v), release(true) {
+		ClassType<T>::PushInstanceCopy(vm, instance);
+		sq_getstackobj(vm, -1, &obj);
+		sq_addref(vm, &obj);
+	}
+
+
     virtual ~Object() {
         if(release) {
             Release();

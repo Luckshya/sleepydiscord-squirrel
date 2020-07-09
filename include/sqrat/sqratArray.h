@@ -205,6 +205,23 @@ namespace Sqrat {
         Array(const Object& obj) : ArrayBase(obj) {
         }
     };
+
+	template<>
+	struct Var<Array> {
+		static void push(HSQUIRRELVM vm, const Array& value) {
+			HSQOBJECT obj;
+			sq_resetobject(&obj);
+			obj = value.GetObject();
+			sq_pushobject(vm,obj);
+		}
+	};
+
+	template<>
+	struct Var<Array&> : Var<Array> {};
+
+	template<>
+	struct Var<const Array&> : Var<Array> {};
+
 }
 
 #endif
