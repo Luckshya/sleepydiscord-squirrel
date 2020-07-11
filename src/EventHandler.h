@@ -139,9 +139,9 @@ public :
 // ------------------------------------------------------------------------------------------------
 class CError : public SqEvent {
 private:
-	std::tuple<SQInteger, std::string> m_Data;
+	std::tuple<int, std::string> m_Data;
 public :
-	explicit CError(SQInteger code, const std::string &message) {
+	explicit CError(int code, const std::string &message) {
 		m_Data = std::move(std::make_tuple(code, message));
 	}
 
@@ -183,161 +183,126 @@ public :
 // ------------------------------------------------------------------------------------------------
 class CMessage : public SqEvent {
 private :
-	Message *m_Data;
+	Message m_Data;
 public:
 	explicit CMessage(SleepyDiscord::Message &message) {
-		m_Data = new Message(message);
+		m_Data = std::move(Message(message));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_MESSAGE, "MESSAGE", m_Data);
-	}
-
-	~CMessage() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_MESSAGE, "MESSAGE", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CGuild : public SqEvent {
 private:
-	Guild *m_Data;
+	Guild m_Data;
 public:
 	explicit CGuild(SleepyDiscord::Server &server) {
-		m_Data = new Guild(server);
+		m_Data = std::move(Guild(server));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_SERVER, "GUILD", m_Data);
-	}
-
-	~CGuild() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_SERVER, "GUILD", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CGuildEdit : public SqEvent {
 private :
-	Guild *m_Data;
+	Guild m_Data;
 public:
 	explicit CGuildEdit(SleepyDiscord::Server &server) {
-		m_Data = new Guild(server);
+		m_Data = std::move(Guild(server));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_SERVER_EDIT, "GUILD_EDIT", m_Data);
-	}
-
-	~CGuildEdit() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_SERVER_EDIT, "GUILD_EDIT", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CGuildDelete : public SqEvent {
 private :
-	Guild *m_Data;
+	Guild m_Data;
 public:
 	explicit CGuildDelete(SleepyDiscord::UnavailableServer &server) {
-		m_Data = new Guild(reinterpret_cast<SleepyDiscord::Server &>(server));
+		m_Data = std::move(Guild(reinterpret_cast<SleepyDiscord::Server &>(server)));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_SERVER_DELETE, "GUILD_DELETE", m_Data);
-	}
-
-	~CGuildDelete() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_SERVER_DELETE, "GUILD_DELETE", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CChannel : public SqEvent {
 private:
-	Channel *m_Data;
+	Channel m_Data;
 public :
 	explicit CChannel(SleepyDiscord::Channel &channel) {
-		m_Data = new Channel(channel);
+		m_Data = std::move(Channel(channel));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_CHANNEL, "CHANNEL", m_Data);
-	}
-
-	~CChannel() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_CHANNEL, "CHANNEL", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CChannelEdit : public SqEvent {
 private:
-	Channel *m_Data;
+	Channel m_Data;
 public :
 	explicit CChannelEdit(SleepyDiscord::Channel &channel) {
-		m_Data = new Channel(channel);
+		m_Data = std::move(Channel(channel));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_CHANNEL_EDIT, "CHANNEL_EDIT", m_Data);
-	}
-
-	~CChannelEdit() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_CHANNEL_EDIT, "CHANNEL_EDIT", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CChannelDelete : public SqEvent {
 private:
-	Channel *m_Data;
+	Channel m_Data;
 public :
 	explicit CChannelDelete(SleepyDiscord::Channel &channel) {
-		m_Data = new Channel(channel);
+		m_Data = std::move(Channel(channel));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_CHANNEL_DELETE, "CHANNEL_DELETE", m_Data);
-	}
-
-	~CChannelDelete() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_CHANNEL_DELETE, "CHANNEL_DELETE", std::move(m_Data));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CRole : public SqEvent {
 private:
-	std::tuple<std::string, Role *> m_Data;
+	std::tuple<std::string, Role> m_Data;
 public :
 	explicit CRole(const std::string &serverID, SleepyDiscord::Role &role) {
-		m_Data = std::move(std::make_tuple(serverID, new Role(role)));
+		m_Data = std::move(std::make_tuple(serverID, std::move(Role(role))));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_ROLE, "ROLE", std::get<0>(m_Data), std::get<1>(m_Data));
+		ForwardEvent(session, ON_ROLE, "ROLE", std::get<0>(m_Data), std::move(std::get<1>(m_Data)));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CRoleEdit : public SqEvent {
 private:
-	std::tuple<std::string, Role *> m_Data;
+	std::tuple<std::string, Role> m_Data;
 public :
 	explicit CRoleEdit(const std::string &serverID, SleepyDiscord::Role &role) {
-		m_Data = std::move(std::make_tuple(serverID, new Role(role)));
+		m_Data = std::move(std::make_tuple(serverID, std::move(Role(role))));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_ROLE_EDIT, "ROLE_EDIT", std::get<0>(m_Data), std::get<1>(m_Data));
+		ForwardEvent(session, ON_ROLE_EDIT, "ROLE_EDIT", std::get<0>(m_Data), std::move(std::get<1>(m_Data)));
 	}
 };
 
@@ -358,25 +323,25 @@ public :
 // ------------------------------------------------------------------------------------------------
 class CMember : public SqEvent {
 private:
-	std::tuple<std::string, ServerMember *> m_Data;
+	std::tuple<std::string, ServerMember> m_Data;
 public :
 	explicit CMember(const std::string &serverID, SleepyDiscord::ServerMember &member) {
-		m_Data = std::move(std::make_tuple(serverID, new ServerMember(member)));
+		m_Data = std::move(std::make_tuple(serverID, std::move(ServerMember(member))));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_MEMBER, "MEMBER", std::get<0>(m_Data), std::get<1>(m_Data));
+		ForwardEvent(session, ON_MEMBER, "MEMBER", std::get<0>(m_Data), std::move(std::get<1>(m_Data)));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CMemberEdit : public SqEvent {
 private:
-	std::tuple<std::string, User *, sleepyRoles, std::string> m_Data;
+	std::tuple<std::string, User, sleepyRoles, std::string> m_Data;
 public :
 	explicit CMemberEdit(const std::string &serverID, SleepyDiscord::User &user, sleepyRoles &roles,
 						 const std::string &nick) {
-		m_Data = std::move(std::make_tuple(serverID, new User(user), roles, nick));
+		m_Data = std::move(std::make_tuple(serverID, std::move(User(user)), roles, nick));
 	}
 
 	void PushObject(CSession *session) override {
@@ -389,7 +354,7 @@ public :
 			++idx;
 		}
 
-		ForwardEvent(session, ON_MEMBER_EDIT, "MEMBER_EDIT", std::get<0>(m_Data), std::get<1>(m_Data), roles,
+		ForwardEvent(session, ON_MEMBER_EDIT, "MEMBER_EDIT", std::get<0>(m_Data), std::move(std::get<1>(m_Data)), roles,
 					 std::get<3>(m_Data));
 	}
 };
@@ -397,33 +362,28 @@ public :
 // ------------------------------------------------------------------------------------------------
 class CMemberRemove : public SqEvent {
 private:
-	std::tuple<std::string, User *> m_Data;
+	std::tuple<std::string, User> m_Data;
 public :
 	explicit CMemberRemove(const std::string &serverID, SleepyDiscord::User &user) {
-		m_Data = std::move(std::make_tuple(serverID, new User(user)));
+		m_Data = std::move(std::make_tuple(serverID, std::move(User(user))));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_MEMBER_REMOVE, "MEMBER_REMOVE", std::get<0>(m_Data), std::get<1>(m_Data));
+		ForwardEvent(session, ON_MEMBER_REMOVE, "MEMBER_REMOVE", std::get<0>(m_Data), std::move(std::get<1>(m_Data)));
 	}
 };
 
 // ------------------------------------------------------------------------------------------------
 class CUserEdit : public SqEvent {
 private:
-	User *m_Data;
+	User m_Data;
 public :
 	explicit CUserEdit(SleepyDiscord::User &user) {
-		m_Data = new User(user);
+		m_Data = std::move(User(user));
 	}
 
 	void PushObject(CSession *session) override {
-		ForwardEvent(session, ON_USER_EDIT, "USER_EDIT", m_Data);
-	}
-
-	~CUserEdit() {
-		delete m_Data;
-		m_Data = nullptr;
+		ForwardEvent(session, ON_USER_EDIT, "USER_EDIT", std::move(m_Data));
 	}
 };
 }
